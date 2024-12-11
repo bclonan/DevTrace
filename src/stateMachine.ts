@@ -4,7 +4,21 @@ import { assign, createActor, createMachine } from "xstate";
 import { AIProvider } from "./ai/AIModelFactory.ts";
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
 
-interface DevTraceContext {
+export interface LiveEvent {
+  eventId: string;
+  type: string;
+  message: string;
+  filePath: string;
+  lineNumber: number;
+  timestamp: Date;
+  suggestedFix?: {
+    description: string;
+    codeSnippet: string;
+  };
+}
+
+
+export interface DevTraceContext {
   analysisResults?: Record<string, unknown>;
   errorMessage?: string;
   flowResults?: Record<string, unknown>;
@@ -12,16 +26,22 @@ interface DevTraceContext {
   hotswapResults?: Record<string, unknown>;
   currentFile: string | null;
   selectedFunction: string | null;
-  liveEvents: Record<string, unknown>[];
+  liveEvents: LiveEvent[];
   hotswapHistory: { timestamp: number; details: string }[];
   aiProvider: AIProvider;
   apiKey: string;
-  suggestions?: any;
+  suggestions?: Record<string, AISuggestion>; // Adjust type if necessary
+  // Add other context variables as needed
   userPreferences?: Record<string, unknown>;
   sessionId?: string;
   projectSettings?: Record<string, unknown>;
-  activeBreakpoints?: any[];
-  debugSession?: any;
+  activeBreakpoints?: { id: string; line: number; enabled: boolean }[]; // Adjust type as needed
+  debugSession?: {
+    sessionId: string;
+    isActive: boolean;
+    startTime: Date;
+    endTime?: Date;
+  };
   performanceMetrics?: Record<string, unknown>;
   codeSnippets?: Record<string, string>;
   userNotes?: string[];
@@ -30,6 +50,7 @@ interface DevTraceContext {
   stateId?: string;
   newCode?: string;
 }
+
 
 export type DevTraceState =
   | { value: "idle"; context: DevTraceContext }
@@ -370,24 +391,28 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
         );
         return results;
       },
-      startLiveTrace: async (context: DevTraceContext): Promise<Record<string, unknown>> => {
-        const runtimeFacade = new RuntimeFacade();
-        // Note: Removed direct references to devTraceActor here.
-        // If you need to interact with devTraceActor, do so outside the machine after it's started.
-        const results = await runtimeFacade.startLiveTrace(
-          {
-            subscribe: (_callback) => {
-              // Set up external subscriptions as needed.
+      startLiveTrace: () => ({
+        src: async () => {
+          const runtimeFacade = new RuntimeFacade();
+          const results = await runtimeFacade.startLiveTrace({
+            subscribe: (callback) => {
+              devTraceActor.subscribe((state) => {
+                callback({
+                  value: state.value as string,
+                  context: {
+                    liveEvents: state.context.liveEvents as unknown as LiveEvent[],
+                    errorMessage: state.context.errorMessage as string,
+                  },
+                });
+              });
             },
-            send: (_message) => {
-              // Implement message sending as needed.
-            },
-          },
-          { webview: { postMessage: () => { }, onDidReceiveMessage: () => { } } },
-        );
-        return results;
-      },
-      performHotswap: async (context) => {
+            send: (message: { type: string }) => devTraceActor.send(message as DevTraceEvent),
+          }, { webview: { postMessage: () => { }, onDidReceiveMessage: () => { } } });
+          return results;
+        },
+        id: "startLiveTraceActor",
+      }),
+      performHotswap: async (context: DevTraceContext): Promise<Record<string, unknown>> => {
         const runtimeFacade = new RuntimeFacade();
         const results = await runtimeFacade.performHotswap(
           "hotswap",
@@ -396,7 +421,7 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
         );
         return results;
       },
-      fetchSuggestions: async (context, event: { errorMessage: string }) => {
+      fetchSuggestions: async (context: DevTraceContext, event: { errorMessage: string }): Promise<Record<string, { id: string; description: string }>> => {
         const runtimeFacade = new RuntimeFacade();
         const suggestions = await runtimeFacade.fetchSuggestions(
           event.errorMessage,
@@ -404,9 +429,12 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
           context.aiProvider,
           context.apiKey,
         );
-        return suggestions;
+        return suggestions.reduce((acc, suggestion) => {
+          acc[suggestion.id] = suggestion;
+          return acc;
+        }, {} as Record<string, { id: string; description: string }>);
       },
-      applySuggestion: async (context, event: { suggestion: Record<string, unknown> }) => {
+      applySuggestion: async (context: DevTraceContext, event: { suggestion: Record<string, unknown> }) => {
         const runtimeFacade = new RuntimeFacade();
         const result = await runtimeFacade.applySuggestion(
           context.currentFile ?? "",
@@ -432,7 +460,7 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
           event?.functionName ?? null,
       }),
       addLiveEvent: assign({
-        liveEvents: (context, event: { type: "addLiveEvent"; event: Record<string, unknown> }) => [
+        liveEvents: (context: DevTraceContext, event: { type: "addLiveEvent"; event: Record<string, unknown> }) => [
           ...context.liveEvents,
           event.event,
         ],
@@ -441,9 +469,9 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
         liveEvents: [],
       }),
       addHotswapHistoryEntry: assign({
-        hotswapHistory: (context, event: { entry: { timestamp: number; details: string } }) => [
+        hotswapHistory: (context: DevTraceContext, event) => [
           ...context.hotswapHistory,
-          event.entry,
+          (event as { entry: { timestamp: number; details: string } }).entry,
         ],
       }),
       clearHotswapHistory: assign({

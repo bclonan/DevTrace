@@ -111,12 +111,15 @@ export interface FlowNode {
  */
 export interface LiveEvent {
     eventId: string;
-    type: "error" | "warning" | "info" | "log" | "performance";
+    type: string;
     message: string;
-    filePath?: string;
-    lineNumber?: number;
+    filePath: string;
+    lineNumber: number;
     timestamp: Date;
-    // ... other properties as needed
+    suggestedFix?: {
+        description: string;
+        codeSnippet: string;
+    };
 }
 
 /**
@@ -156,12 +159,12 @@ export interface DevTraceContext {
     hotswapHistory: { timestamp: number; details: string }[];
     aiProvider: AIProvider;
     apiKey: string;
-    suggestions?: Record<string, AISuggestion>;
+    suggestions?: Record<string, AISuggestion>; // Adjust type if necessary
     // Add other context variables as needed
     userPreferences?: Record<string, unknown>;
     sessionId?: string;
     projectSettings?: Record<string, unknown>;
-    activeBreakpoints?: { id: string; line: number; enabled: boolean }[];
+    activeBreakpoints?: { id: string; line: number; enabled: boolean }[]; // Adjust type as needed
     debugSession?: {
         sessionId: string;
         isActive: boolean;
@@ -176,6 +179,7 @@ export interface DevTraceContext {
     stateId?: string;
     newCode?: string;
 }
+
 
 /**
  * Events that can be sent to the state machine.
@@ -278,3 +282,108 @@ export interface FetchSuggestionsResult {
 export interface ApplySuggestionResult {
     [key: string]: unknown;
 }
+
+export interface FetchSuggestionsEvent {
+    errorMessage: string;
+}
+
+export interface ApplySuggestionEvent {
+    suggestion: Record<string, unknown>;
+}
+
+export interface SuggestionEvent {
+    errorMessage: string;
+}
+
+export interface UpdateCurrentFileEvent {
+    file: string;
+}
+
+export interface UpdateSelectedFunctionEvent {
+    functionName: string;
+}
+
+export interface AddLiveEventEvent {
+    event: LiveEvent;
+}
+
+export interface ClearLiveEventsEvent {
+}
+
+export interface AddHotswapHistoryEntryEvent {
+    entry: HotswapHistoryEntry;
+}
+
+export interface ClearHotswapHistoryEvent {
+}
+
+export interface DevTraceService {
+    analyzeCode(req: AnalyzeCodeRequest): Promise<AnalyzeCodeResult>;
+    processFlow(req: ProcessFlowRequest): Promise<ProcessFlowResult>;
+    startLiveTrace(req: StartLiveTraceRequest): Promise<StartLiveTraceResult>;
+    performHotswap(req: PerformHotswapRequest): Promise<PerformHotswapResult>;
+    fetchSuggestions(req: FetchSuggestionsRequest): Promise<FetchSuggestionsResult>;
+    applySuggestion(req: ApplySuggestionRequest): Promise<ApplySuggestionResult>;
+}
+
+export interface AnalyzeRequest {
+    code: string;
+}
+
+export interface AnalyzeResponse {
+    issues: Issue[];
+}
+
+export interface FlowRequest {
+    functionName: string;
+}
+
+export interface FlowResponse {
+    flow: FlowNode[];
+}
+
+export interface HotswapRequest {
+    code: string;
+}
+
+export interface HotswapResponse {
+    status: "success" | "error";
+    message: string;
+}
+
+export interface AISuggestFixRequest {
+    errorMessage: string;
+}
+
+export interface AISuggestFixResponse {
+    suggestions: AISuggestion[];
+}
+
+export interface ApplySuggestionRequest {
+    suggestion: AISuggestion;
+}
+
+export interface ApplySuggestionResponse {
+    success: boolean;
+}
+
+export interface AnalyzeCodeRequest {
+    code: string;
+}
+
+export interface ProcessFlowRequest {
+    functionName: string;
+}
+
+export interface StartLiveTraceRequest {
+}
+
+export interface PerformHotswapRequest {
+}
+
+export interface FetchSuggestionsRequest {
+    errorMessage: string;
+}
+
+
+
