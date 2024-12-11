@@ -1,7 +1,7 @@
 import axios from "axios";
 import { AIProvider } from "../ai/AIModelFactory.ts";
 import { NodeAdapter } from "../runtimeAdapters/NodeAdapter.ts";
-import { LiveEvent } from "../types/LiveEvent.ts";
+import { LiveEvent } from "../types.d.ts";
 
 /**
  * The RuntimeFacade class.
@@ -227,7 +227,6 @@ export class RuntimeFacade {
       throw error;
     }
   }
-
   /**
    * Starts a live trace session.
    * @param devTraceActor The DevTrace state machine actor.

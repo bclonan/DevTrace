@@ -4,7 +4,6 @@ import { assign, createActor, createMachine } from "xstate";
 import { AIProvider } from "./ai/AIModelFactory.ts"; // Import AIProvider from the correct module
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
 
-
 /**
  * The DevTrace state machine definition.
  * This machine manages the different states and transitions of the DevTrace AI extension.
@@ -37,6 +36,8 @@ interface DevTraceContext {
   userNotes?: string[];
   activeTheme?: string;
   recentFiles?: string[];
+  stateId?: string;
+  newCode?: string;
 }
 
 type DevTraceEvent =
@@ -525,10 +526,8 @@ export const devTraceMachine = createMachine<
         // Call the RuntimeFacade to perform hotswap
         const runtimeFacade = new RuntimeFacade();
         const results = await runtimeFacade.performHotswap(
-          {
-            currentFile: context.currentFile,
-            selectedFunction: context.selectedFunction,
-          },
+          context.stateId ?? "", // Provide a default value if stateId is undefined
+          context.newCode ?? "", // Provide a default value if newCode is undefined
         );
         // ... any other actions needed to perform hotswap
         return results;
@@ -555,7 +554,10 @@ export const devTraceMachine = createMachine<
         liveEvents: (
           context,
           event: { type: "addLiveEvent"; event: Record<string, unknown> },
-        ) => [...context.liveEvents, event.event],
+        ) => [
+          ...((context as unknown) as DevTraceContext).liveEvents,
+          event.event,
+        ],
       }),
 
       /**
@@ -572,7 +574,10 @@ export const devTraceMachine = createMachine<
         hotswapHistory: (
           context,
           event,
-        ) => [...context.hotswapHistory, event.entry],
+        ) => [
+          ...((context as unknown) as DevTraceContext).hotswapHistory,
+          (event as { entry: { timestamp: number; details: string } }).entry,
+        ],
       }),
 
       /**

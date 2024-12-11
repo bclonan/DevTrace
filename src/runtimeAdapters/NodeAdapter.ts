@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { v4 as uuidv4 } from "uuid";
 import { LanguageRuntimeAdapter } from "./LanguageRuntimeAdapter.ts";
 
-const require = createRequire(import.meta.url);
+const require = createRequire(__filename);
 const asyncHooks = require("node:async_hooks");
 
 /**
