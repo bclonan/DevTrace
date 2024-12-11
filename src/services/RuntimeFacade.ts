@@ -1,6 +1,7 @@
 import axios from "axios";
 import { AIProvider } from "../ai/AIModelFactory.ts";
 import { NodeAdapter } from "../runtimeAdapters/NodeAdapter.ts";
+import { LiveEvent } from "../types/LiveEvent.ts";
 
 /**
  * The RuntimeFacade class.
@@ -146,7 +147,12 @@ export class RuntimeFacade {
     apiKey: string,
   ) {
     try {
-      const response: { data: any } = await axios.post(
+      const response: {
+        data: {
+          success: boolean;
+          suggestions: { id: string; description: string }[];
+        };
+      } = await axios.post(
         "http://localhost:3000/ai/suggestFix",
         {
           errorMessage,
@@ -170,7 +176,12 @@ export class RuntimeFacade {
    */
   async applySuggestion(currentFile: string, suggestion: string) {
     try {
-      const response: { data: any } = await axios.post(
+      const response: {
+        data: {
+          success: boolean;
+          suggestions: { id: string; description: string }[];
+        };
+      } = await axios.post(
         "http://localhost:3000/code/applySuggestion",
         {
           currentFile,
@@ -231,41 +242,66 @@ export class RuntimeFacade {
    * runtimeFacade.startLiveTrace(devTraceActor, webviewView);
    * ```
    */
-  async startLiveTrace(
+  startLiveTrace(
     devTraceActor: {
-      subscribe: (callback: (state: any) => void) => void;
+      subscribe: (
+        callback: (
+          state: {
+            value: string;
+            context: { liveEvents: LiveEvent[]; errorMessage: string };
+          },
+        ) => void,
+      ) => void;
       send: (message: { type: string }) => void;
     },
     webviewView: {
       webview: {
-        postMessage: (message: any) => void;
-        onDidReceiveMessage: (callback: (message: any) => void) => void;
+        postMessage: (
+          message: {
+            type: string;
+            payload: unknown;
+            liveEvents?: LiveEvent[];
+            errorMessage?: string;
+          },
+        ) => void;
+        onDidReceiveMessage: (
+          callback: (message: { type: string; payload: unknown }) => void,
+        ) => void;
       };
     },
   ) {
     // Listen for state changes
-    devTraceActor.subscribe((state: any) => {
-      // Send the current state to the webview
-      webviewView.webview.postMessage({
-        type: "stateChanged",
-        state: state.value,
-        liveEvents: state.context.liveEvents,
-        errorMessage: state.context.errorMessage,
-      });
-    });
+    devTraceActor.subscribe(
+      (
+        state: {
+          value: string;
+          context: { liveEvents: LiveEvent[]; errorMessage: string };
+        },
+      ) => {
+        // Send the current state to the webview
+        webviewView.webview.postMessage({
+          type: "stateChanged",
+          payload: state.value,
+          liveEvents: state.context.liveEvents,
+          errorMessage: state.context.errorMessage,
+        });
+      },
+    );
 
     // Handle messages from the webview
-    webviewView.webview.onDidReceiveMessage((message: any) => {
-      switch (message.type) {
-        case "startTracing":
-          devTraceActor.send({ type: "trace" });
-          break;
-        case "stopTracing":
-          devTraceActor.send({ type: "exit" });
-          break;
-          // ... handle other messages from the webview
-      }
-    });
+    webviewView.webview.onDidReceiveMessage(
+      (message: { type: string; payload: unknown }) => {
+        switch (message.type) {
+          case "startTracing":
+            devTraceActor.send({ type: "trace" });
+            break;
+          case "stopTracing":
+            devTraceActor.send({ type: "exit" });
+            break;
+            // ... handle other messages from the webview
+        }
+      },
+    );
 
     // Start tracing
     devTraceActor.send({ type: "trace" });
@@ -286,9 +322,9 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processFlowData(flowData: any) {
+  async processFlowData(flowData: Record<string, unknown>) {
     try {
-      const response: { data: any } = await axios.post(
+      const response: { data: { processedData: unknown } } = await axios.post(
         "http://localhost:3000/flow/process",
         {
           flowData,
@@ -313,9 +349,11 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processLiveEvent(liveEvent: any) {
+  async processLiveEvent(
+    liveEvent: { id: string; type: string; data: Record<string, unknown> },
+  ) {
     try {
-      const response: { data: any } = await axios.post(
+      const response: { data: { processedData: unknown } } = await axios.post(
         "http://localhost:3000/live/process",
         {
           liveEvent,
@@ -340,7 +378,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processIssue(issue: any) {
+  async processIssue(issue: { id: string; description: string }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/issue/process",
@@ -367,7 +405,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processSuggestion(suggestion: any) {
+  async processSuggestion(suggestion: { id: string; description: string }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/suggestion/process",
@@ -394,7 +432,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processFix(fix: any) {
+  async processFix(fix: { id: string; description: string }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/fix/process",
@@ -421,7 +459,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processTrace(trace: any) {
+  async processTrace(trace: { id: string; data: Record<string, unknown> }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/trace/process",
@@ -448,7 +486,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processState(state: any) {
+  async processState(state: { id: string; data: Record<string, unknown> }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/state/process",
@@ -475,7 +513,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processActor(actor: any) {
+  async processActor(actor: { id: string; name: string }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/actor/process",
@@ -502,7 +540,9 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processEvent(event: any) {
+  async processEvent(
+    event: { id: string; type: string; data: Record<string, unknown> },
+  ) {
     try {
       const response = await axios.post(
         "http://localhost:3000/event/process",
@@ -529,7 +569,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processMetric(metric: any) {
+  async processMetric(metric: { id: string; value: number }) {
     try {
       const response = await axios.post(
         "http://localhost:3000/metric/process",
@@ -556,7 +596,7 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processException(exception: any) {
+  async processException(exception: Error) {
     try {
       const response = await axios.post(
         "http://localhost:3000/exception/process",
@@ -583,7 +623,14 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processRequest(request: any) {
+  async processRequest(
+    request: {
+      method: string;
+      url: string;
+      headers?: Record<string, string>;
+      body?: Record<string, unknown>;
+    },
+  ) {
     try {
       const response = await axios.post(
         "http://localhost:3000/request/process",
@@ -610,22 +657,27 @@ export class RuntimeFacade {
    * console.log(response);
    * ```
    */
-  async processResponse(res: any) {
+  async processResponse(
+    res: {
+      status: number;
+      data: Record<string, unknown>;
+      headers: Record<string, string>;
+    },
+  ) {
     try {
-      const response: { data: any } = await axios.post(
-        "http://localhost:3000/response/process",
-        {
-          response: res,
-        },
-      );
+      const response: { data: { processedResponse: unknown } } = await axios
+        .post(
+          "http://localhost:3000/response/process",
+          {
+            response: res,
+          },
+        );
       return response.data;
     } catch (error) {
       console.error("Error processing response:", error);
       throw error;
     }
   }
-
-  
 
   // ... other methods
 }

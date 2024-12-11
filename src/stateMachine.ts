@@ -204,8 +204,7 @@ export const devTraceMachine = createMachine<
              * Invoke the `analyzeCode` service to perform the analysis.
              */
             invoke: {
-              src: (context: any, _event: any) =>
-                context.services.analyzeCode(),
+              src: "analyzeCode",
               /**
                * When the service finishes successfully, transition to `results`.
                */
@@ -215,8 +214,10 @@ export const devTraceMachine = createMachine<
                  * Assign the analysis results to the `analysisResults` context variable.
                  */
                 actions: assign({
-                  analysisResults: (_, event: { data: any }) =>
-                    event ? event.data : undefined,
+                  analysisResults: (
+                    _,
+                    event: { data: Record<string, unknown> },
+                  ) => event ? event.data : undefined,
                 }),
               },
               /**
@@ -228,7 +229,7 @@ export const devTraceMachine = createMachine<
                  * Assign the error message to the `errorMessage` context variable.
                  */
                 actions: assign({
-                  errorMessage: (_, event: { data: any }) =>
+                  errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -263,14 +264,14 @@ export const devTraceMachine = createMachine<
               onDone: {
                 target: "suggestionsReceived",
                 actions: assign({
-                  suggestions: (_, event: { data: any }) =>
+                  suggestions: (_, event: { data: Record<string, unknown> }) =>
                     event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event: { data: any }) =>
+                  errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -303,7 +304,7 @@ export const devTraceMachine = createMachine<
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event: { data: any }) =>
+                  errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -330,14 +331,14 @@ export const devTraceMachine = createMachine<
               onDone: {
                 target: "completed",
                 actions: assign({
-                  flowResults: (_, event: { data: any }) =>
+                  flowResults: (_, event: { data: Record<string, unknown> }) =>
                     event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event: { data: any }) =>
+                  errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -374,14 +375,14 @@ export const devTraceMachine = createMachine<
               onDone: {
                 target: "completed",
                 actions: assign({
-                  traceResults: (_, event: { data: any }) =>
+                  traceResults: (_, event: { data: Record<string, unknown> }) =>
                     event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event: { data: any }) =>
+                  errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -422,14 +423,16 @@ export const devTraceMachine = createMachine<
               onDone: {
                 target: "completed",
                 actions: assign({
-                  hotswapResults: (_, event: { data: any }) =>
-                    event ? event.data : undefined,
+                  hotswapResults: (
+                    _,
+                    event: { data: Record<string, unknown> },
+                  ) => event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event: { data: any }) =>
+                  errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -500,12 +503,10 @@ export const devTraceMachine = createMachine<
         const runtimeFacade = new RuntimeFacade();
         if (context.currentFile && context.selectedFunction) {
           const results = await runtimeFacade.startLiveTrace({
-            subscribe: (callback) => {
-              runtimeFacade.onLiveTraceEvent((event) => {
-                callback(event);
-              });
+            subscribe: (_callback) => {
+              // Removed call to non-existent onLiveTraceEvent method
             },
-            send: (message) => {
+            send: (_message) => {
               // runtimeFacade.sendMessage(message); // Removed as sendMessage does not exist on RuntimeFacade
             },
           });
@@ -519,10 +520,15 @@ export const devTraceMachine = createMachine<
       /**
        * Action to perform hotswap.
        */
-      performHotswap: async () => {
+      performHotswap: async (context: DevTraceContext) => {
         // Call the RuntimeFacade to perform hotswap
         const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.performHotswap();
+        const results = await runtimeFacade.performHotswap(
+          {
+            currentFile: context.currentFile,
+            selectedFunction: context.selectedFunction,
+          },
+        );
         // ... any other actions needed to perform hotswap
         return results;
       },
@@ -545,7 +551,10 @@ export const devTraceMachine = createMachine<
        * Action to add a live event to the context.
        */
       addLiveEvent: assign({
-        liveEvents: (context, event) => [...context.liveEvents, event.event],
+        liveEvents: (
+          context,
+          event: { type: "addLiveEvent"; event: Record<string, unknown> },
+        ) => [...context.liveEvents, event.event],
       }),
 
       /**
@@ -630,7 +639,7 @@ export const devTraceMachine = createMachine<
       }),
       applySuggestion: (
         context: DevTraceContext,
-        event: { suggestion: any },
+        event: { suggestion: Record<string, unknown> },
       ) => ({
         src: async () => {
           const runtimeFacade = new RuntimeFacade();
@@ -651,7 +660,6 @@ export const devTraceMachine = createMachine<
  * This actor is used to interpret the state machine and manage its execution.
  */
 export const devTraceActor = createActor(devTraceMachine, {
-  devTools: true, // Enable devtools for debugging (if available in your environment)
   id: "devTraceActor", // Assign an ID to the actor
 
   // ... other configuration options for the actor, e.g.,

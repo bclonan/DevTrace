@@ -3,7 +3,7 @@
 		"module": "Node16",
 		"target": "ES2022",
 		"outDir": "out",
-		"rootDir": "src",
+		"rootDir": "./src",
 		"lib": ["ES2022"],
 		"sourceMap": true,
 		"strict": true, /* Enable all strict type-checking options */
@@ -15,9 +15,10 @@
 		"skipLibCheck": true, /* Skip type checking of declaration files */
 		"forceConsistentCasingInFileNames": true, /* Ensure file names are case-consistent */
 		"allowImportingTsExtensions": true, /* Allow .ts extensions in import paths */
+		"noEmit": true, /* Do not emit output files */
 		"paths": {
 			"@/*": [
-				"src/*"
+				"./src/*"
 			] /* Simplify imports with an alias for the src directory */
 		},
 		/* Additional Settings for Developer Convenience */
