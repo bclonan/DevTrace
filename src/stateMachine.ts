@@ -1,12 +1,10 @@
-// src/stateMachine.ts
+import * as vscode from 'vscode';
+import { assign, createActor, createMachine, type StateFrom } from "xstate";
+import { AIProvider } from "./ai/AIModelFactory";
+import { RuntimeFacade } from "./services/RuntimeFacade";
+import type { AISuggestion, LiveEvent, FetchSuggestionsRequest } from "./types";
 
-import { assign, createActor, createMachine } from "xstate";
-import { AIProvider } from "./ai/AIModelFactory.ts";
-import { RuntimeFacade } from "./services/RuntimeFacade.ts";
-import type { AISuggestion, LiveEvent } from "./types.d.ts";
-
-
-interface DevTraceContext {
+type DevTraceContext = {
   analysisResults?: Record<string, unknown>;
   errorMessage?: string;
   flowResults?: Record<string, unknown>;
@@ -15,56 +13,13 @@ interface DevTraceContext {
   currentFile: string | null;
   selectedFunction: string | null;
   liveEvents: LiveEvent[];
-  hotswapHistory: { timestamp: number; details: string }[];
+  hotswapHistory: Array<{ timestamp: number; details: string }>;
   aiProvider: AIProvider;
   apiKey: string;
-  suggestions?: Record<string, AISuggestion>; // Adjust type if necessary
-  // Add other context variables as needed
-  userPreferences?: Record<string, unknown>;
-  sessionId?: string;
-  projectSettings?: Record<string, unknown>;
-  activeBreakpoints?: { id: string; line: number; enabled: boolean }[]; // Adjust type as needed
-  debugSession?: {
-    sessionId: string;
-    isActive: boolean;
-    startTime: Date;
-    endTime?: Date;
-  };
-  performanceMetrics?: Record<string, unknown>;
-  codeSnippets?: Record<string, string>;
-  userNotes?: string[];
-  activeTheme?: string;
-  recentFiles?: string[];
+  suggestions?: Record<string, AISuggestion>;
   stateId?: string;
   newCode?: string;
-}
-
-
-type DevTraceState =
-  | { value: "idle"; context: DevTraceContext }
-  | { value: "insightMode"; context: DevTraceContext }
-  | { value: "insightMode.idle"; context: DevTraceContext }
-  | { value: "insightMode.analyzing"; context: DevTraceContext }
-  | { value: "insightMode.results"; context: DevTraceContext }
-  | { value: "insightMode.error"; context: DevTraceContext }
-  | { value: "insightMode.fetchingSuggestions"; context: DevTraceContext }
-  | { value: "insightMode.suggestionsReceived"; context: DevTraceContext }
-  | { value: "insightMode.applyingSuggestion"; context: DevTraceContext }
-  | { value: "flowMode"; context: DevTraceContext }
-  | { value: "flowMode.idle"; context: DevTraceContext }
-  | { value: "flowMode.processing"; context: DevTraceContext }
-  | { value: "flowMode.completed"; context: DevTraceContext }
-  | { value: "flowMode.error"; context: DevTraceContext }
-  | { value: "liveTraceMode"; context: DevTraceContext }
-  | { value: "liveTraceMode.idle"; context: DevTraceContext }
-  | { value: "liveTraceMode.tracing"; context: DevTraceContext }
-  | { value: "liveTraceMode.completed"; context: DevTraceContext }
-  | { value: "liveTraceMode.error"; context: DevTraceContext }
-  | { value: "hotswapMode"; context: DevTraceContext }
-  | { value: "hotswapMode.idle"; context: DevTraceContext }
-  | { value: "hotswapMode.swapping"; context: DevTraceContext }
-  | { value: "hotswapMode.completed"; context: DevTraceContext }
-  | { value: "hotswapMode.error"; context: DevTraceContext };
+};
 
 type DevTraceEvent =
   | { type: "exit" }
@@ -72,408 +27,360 @@ type DevTraceEvent =
   | { type: "start.flowMode" }
   | { type: "start.liveTraceMode" }
   | { type: "start.hotswapMode" }
-  | { type: "analyze" }
-  | { type: "fetchSuggestions" }
-  | { type: "applySuggestion"; suggestion: any }
-  | { type: "process"; data: { functionName: string } }
-  | { type: "trace" }
-  | { type: "swap" }
+  | { type: "generateFlow"; functionName: string }
+  | { type: "streamLiveEvents" }
   | { type: "rollback"; stateId: string }
   | { type: "applyFix"; stateId: string; newCode: string }
   | { type: "playForward"; stateId: string }
-  | { type: "streamLiveEvents" }
-  | { type: "generateFlow"; functionName: string }
-  | { type: "stateChanged"; state: string; liveEvents: any; errorMessage: string }
-  | { type: "liveEvents"; event: Record<string, unknown> }
-  | { type: "error"; errorMessage: string }
+  | { type: "analyze" }
+  | { type: "fetchSuggestions"; errorMessage: string }
+  | { type: "applySuggestion"; suggestion: AISuggestion }
+  | { type: "process"; functionName: string }
+  | { type: "trace" }
+  | { type: "swap" }
   | { type: "updateCurrentFile"; file: string }
   | { type: "updateSelectedFunction"; functionName: string }
-  | { type: "addLiveEvent"; event: any }
+  | { type: "addLiveEvent"; event: LiveEvent }
   | { type: "clearLiveEvents" }
   | { type: "addHotswapHistoryEntry"; entry: { timestamp: number; details: string } }
   | { type: "clearHotswapHistory" }
-  | { type: "NEW_DATA"; data: any };
+  | { type: "NEW_DATA"; data: LiveEvent };
 
-
-export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, DevTraceState>({
-  {
-    context: {
-      analysisResults: undefined,
-      errorMessage: undefined,
-      flowResults: undefined,
-      traceResults: undefined,
-      hotswapResults: undefined,
-      currentFile: null,
-      selectedFunction: null,
-      liveEvents: [],
-      hotswapHistory: [],
-      aiProvider: "openai" as AIProvider,
-      apiKey: "",
-      suggestions: undefined,
+export const devTraceMachine = createMachine({
+  types: {} as {
+    context: DevTraceContext;
+    events: DevTraceEvent;
+  },
+  id: "devTraceAI",
+  context: {
+    currentFile: null,
+    selectedFunction: null,
+    liveEvents: [],
+    hotswapHistory: [],
+    aiProvider: AIProvider.OpenAI,
+    apiKey: "",
+  },
+  initial: "idle",
+  states: {
+    idle: {
+      on: {
+        "start.insightMode": {
+          target: "insightMode",
+          actions: "startTracing",
+        },
+        "start.flowMode": "flowMode",
+        "start.liveTraceMode": {
+          target: "liveTraceMode",
+          actions: "startTracing",
+        },
+        "start.hotswapMode": "hotswapMode",
+      },
     },
-    id: "devTraceAI",
-    initial: "idle",
-    states: {
-      idle: {
-        on: {
-          "start.insightMode": {
-            target: "insightMode",
-            actions: "startTracing",
-          },
-          "start.flowMode": {
-            target: "flowMode",
-          },
-          "start.liveTraceMode": {
-            target: "liveTraceMode",
-            actions: "startTracing",
-          },
-          "start.hotswapMode": {
-            target: "hotswapMode",
+    insightMode: {
+      initial: "idle",
+      states: {
+        idle: {
+          on: { analyze: "analyzing" }
+        },
+        analyzing: {
+          invoke: {
+            src: "analyzeCode",
+            onDone: {
+              target: "results",
+              actions: assign({ analysisResults: (_, event: any) => event?.output }),
+            },
+            onError: {
+              target: "error",
+              actions: assign({ errorMessage: (_, event: any) => event?.error as string ?? "Unknown error" }),
+            },
           },
         },
-        description:
-          "The machine is in an idle state, waiting for user interaction to start any mode.",
+        results: {
+          on: { fetchSuggestions: "fetchingSuggestions" }
+        },
+        error: {},
+        fetchingSuggestions: {
+          invoke: {
+            src: "fetchSuggestions",
+            onDone: {
+              target: "suggestionsReceived",
+              actions: assign({ suggestions: (_, event: any) => event?.output ?? {} }),
+            },
+            onError: {
+              target: "error",
+              actions: assign({ errorMessage: (_, event: any) => (event?.error as string) ?? "Unknown error" }),
+            },
+          },
+        },
+        suggestionsReceived: {
+          on: { applySuggestion: "applyingSuggestion" }
+        },
+        applyingSuggestion: {
+          invoke: {
+            src: "applySuggestion",
+            onDone: "results",
+            onError: {
+              target: "error",
+              actions: assign({ errorMessage: (_, event: any) => (event?.error as string) ?? "Unknown error" }),
+            },
+          },
+        },
       },
-      insightMode: {
-        on: {
-          analyze: {
-            target: "insightMode.analyzing",
-          },
-          exit: {
-            target: "idle",
-            actions: [
-              "stopTracing",
-              assign({
-                analysisResults: undefined,
-                errorMessage: undefined,
-              }),
-            ],
-          },
+      on: {
+        exit: {
+          target: "idle",
+          actions: ["stopTracing",
+            assign({
+              analysisResults: undefined,
+              errorMessage: undefined,
+            })
+          ],
         },
-        initial: "idle",
-        states: {
-          idle: {},
-          analyzing: {
-            invoke: {
-              src: "analyzeCode",
-              onDone: {
-                target: "results",
-                actions: assign({
-                  analysisResults: (
-                    _,
-                    event: { data: Record<string, unknown> },
-                  ) => event ? event.data : undefined,
-                }),
-              },
-              onError: {
-                target: "error",
-                actions: assign({
-                  errorMessage: (_, event: { data: string }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-            },
-          },
-          results: {
-            on: {
-              fetchSuggestions: {
-                target: "fetchingSuggestions",
-              },
-            },
-          },
-          error: {},
-          fetchingSuggestions: {
-            invoke: {
-              src: "fetchSuggestions",
-              onDone: {
-                target: "suggestionsReceived",
-                actions: assign({
-                  suggestions: (_, event: { data: Record<string, AISuggestion> }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-              onError: {
-                target: "error",
-                actions: assign({
-                  errorMessage: (_, event: { data: string }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-            },
-          },
-          suggestionsReceived: {
-            on: {
-              applySuggestion: {
-                target: "applyingSuggestion",
-              },
-            },
-          },
-          applyingSuggestion: {
-            invoke: {
-              src: "applySuggestion",
-              onDone: {
-                target: "results",
-              },
-              onError: {
-                target: "error",
-                actions: assign({
-                  errorMessage: (_, event: { data: string }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-            },
-          },
-        },
-        description:
-          "Aggregates and analyzes runtime issues, providing insights into errors and their potential fixes.",
       },
-      flowMode: {
-        initial: "idle",
-        states: {
-          idle: {},
-          processing: {
-            invoke: {
-              src: "processFlow",
-              onDone: {
-                target: "completed",
-                actions: assign({
-                  flowResults: (_, event: { data: Record<string, unknown> }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-              onError: {
-                target: "error",
-                actions: assign({
-                  errorMessage: (_, event: { data: string }) =>
-                    event ? event.data : undefined,
-                }),
-              },
+    },
+    flowMode: {
+      initial: "idle",
+      states: {
+        idle: {
+          on: { process: "processing" }
+        },
+        processing: {
+          invoke: {
+            src: "processFlow",
+            onDone: {
+              target: "completed",
+              actions: assign({ flowResults: (_, event: any) => event?.output ?? {} }),
+            },
+            onError: {
+              target: "error",
+              actions: assign({ errorMessage: (_, event: any) => event?.error as string }),
             },
           },
-          completed: {},
-          error: {},
         },
-        on: {
-          process: {
-            target: "flowMode.processing",
+        completed: {},
+        error: {},
+      },
+      on: {
+        exit: {
+          target: "idle",
+          actions: assign({
+            flowResults: undefined,
+            errorMessage: undefined,
+          }),
+        },
+      },
+    },
+    liveTraceMode: {
+      initial: "idle",
+      states: {
+        idle: {
+          on: { trace: "tracing" }
+        },
+        tracing: {
+          invoke: {
+            src: "startLiveTrace",
+            onDone: {
+              target: "completed",
+              actions: assign({ traceResults: (_, event: any) => event?.data ?? {} }),
+            },
+            onError: {
+              target: "error",
+              actions: assign({ errorMessage: (_, event: any) => (event?.data as string) ?? "Unknown error" }),
+            },
           },
-          exit: {
-            target: "idle",
-            actions: assign({
-              flowResults: undefined,
+          on: {
+            NEW_DATA: {
+              actions: ["handleNewData", assign((context: DevTraceContext, event: DevTraceEvent) => {
+                if (event.type === "NEW_DATA") {
+                  return {
+                    ...context,
+                    liveEvents: [...context.liveEvents, event.data]
+                  };
+                }
+                return context;
+              })]
+            },
+            addLiveEvent: {
+              target: undefined,
+              actions: [
+                assign({
+                  liveEvents: (context: DevTraceContext, event: DevTraceEvent & { event: LiveEvent }) => ({
+                    liveEvents: [...context.liveEvents, event.event]
+                  })
+                })
+              ]
+            },
+            NEW_DATA: {
+              actions: assign((context: DevTraceContext, event: DevTraceEvent) => {
+                if (event.type === "NEW_DATA") {
+                  return {
+                    ...context,
+                    liveEvents: [...context.liveEvents, event.data as LiveEvent]
+                  };
+                }
+                return context;
+              })
+            }
+          }
+        },
+        completed: {},
+        error: {},
+      },
+      on: {
+        exit: {
+          target: "idle",
+          actions: [
+            "stopTracing",
+            assign({
+              traceResults: undefined,
               errorMessage: undefined,
             }),
-          },
+          ],
         },
-        description: "Handles the flow of data and processes it accordingly.",
       },
-      liveTraceMode: {
-        initial: "idle",
-        states: {
-          idle: {},
-          tracing: {
-            invoke: {
-              src: "startLiveTrace",
-              onDone: {
-                target: "completed",
-                actions: assign({
-                  traceResults: (_, event: { data: Record<string, unknown> }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-              onError: {
-                target: "error",
-                actions: assign({
-                  errorMessage: (_, event: { data: string }) =>
-                    event ? event.data : undefined,
-                }),
-              },
+    },
+    hotswapMode: {
+      initial: "idle",
+      states: {
+        idle: {
+          on: { swap: "swapping" }
+        },
+        swapping: {
+          invoke: {
+            src: "performHotswap",
+            onDone: {
+              target: "completed",
+              actions: assign({ hotswapResults: (_, event: any) => event?.output ?? {} }),
             },
-            on: {
-              addLiveEvent: { actions: "addLiveEvent" },
-              error: {
-                actions: assign({
-                  errorMessage: (_, event: { data: { errorMessage: string } }) =>
-                    event ? event.data.errorMessage : undefined,
-                }),
-              },
-              NEW_DATA: { actions: "handleNewData" },
+            onError: {
+              target: "error",
+              actions: assign({ errorMessage: (_, event: any) => event?.error as string }),
             },
           },
-          completed: {},
-          error: {},
         },
-        on: {
-          trace: {
-            target: "liveTraceMode.tracing",
-          },
-          exit: {
-            target: "idle",
-            actions: [
-              "stopTracing",
-              assign({
-                traceResults: undefined,
-                errorMessage: undefined,
-              }),
-            ],
-          },
-        },
-        description: "Executes live tracing of the application, capturing real-time data.",
+        completed: {},
+        error: {},
       },
-      hotswapMode: {
-        initial: "idle",
-        states: {
-          idle: {},
-          swapping: {
-            invoke: {
-              src: "performHotswap",
-              onDone: {
-                target: "completed",
-                actions: assign({
-                  hotswapResults: (
-                    _,
-                    event: { data: Record<string, unknown> },
-                  ) => event ? event.data : undefined,
-                }),
-              },
-              onError: {
-                target: "error",
-                actions: assign({
-                  errorMessage: (_, event: { data: string }) =>
-                    event ? event.data : undefined,
-                }),
-              },
-            },
-          },
-          completed: {},
-          error: {},
+      on: {
+        exit: {
+          target: "idle",
+          actions: assign({
+            hotswapResults: undefined,
+            errorMessage: undefined,
+          }),
         },
-        on: {
-          swap: {
-            target: "hotswapMode.swapping",
-          },
-          exit: {
-            target: "idle",
-            actions: assign({
-              hotswapResults: undefined,
-              errorMessage: undefined,
-            }),
-          },
-        },
-        description:
-          "Performs a hotswap of the application, allowing for live updates without restarting.",
       },
     },
   },
-  {
-    services: {
-      analyzeCode: async () => {
-        const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.analyzeCode();
-        return results;
-      },
-      processFlow: async (context: DevTraceContext): Promise<Record<string, unknown>> => {
-        const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.generateFlowData(
-          context.selectedFunction ?? "",
-        );
-        return results;
-      },
-      startLiveTrace: () => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const results = await runtimeFacade.startLiveTrace({
-            subscribe: (callback) => {
-              devTraceActor.subscribe((state) => {
-                callback({
-                  value: state.value as string,
-                  context: {
-                    liveEvents: state.context.liveEvents as unknown as LiveEvent[],
-                    errorMessage: state.context.errorMessage as string,
-                  },
-                });
-              });
-            },
-            send: (message: { type: string }) => devTraceActor.send(message as DevTraceEvent),
-          }, { webview: { postMessage: () => { }, onDidReceiveMessage: () => { } } });
-          return results;
-        },
-        id: "startLiveTraceActor",
-      }),
-      performHotswap: async (context: DevTraceContext): Promise<Record<string, unknown>> => {
-        const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.performHotswap(
-          "hotswap",
-          context.stateId ?? "",
-          context.newCode ?? "",
-        );
-        return results;
-      },
-      fetchSuggestions: async (context: DevTraceContext, event: { errorMessage: string }): Promise<Record<string, { id: string; description: string }>> => {
-        const runtimeFacade = new RuntimeFacade();
-        const suggestions = await runtimeFacade.fetchSuggestions(
-          event.errorMessage,
-          context.currentFile ?? "",
-          context.aiProvider,
-          context.apiKey,
-        );
-        return suggestions.reduce((acc, suggestion) => {
-          acc[suggestion.id] = suggestion;
-          return acc;
-        }, {} as Record<string, { id: string; description: string }>);
-      },
-      applySuggestion: async (context: DevTraceContext, event: { suggestion: Record<string, unknown> }) => {
-        const runtimeFacade = new RuntimeFacade();
-        const result = await runtimeFacade.applySuggestion(
-          context.currentFile ?? "",
-          JSON.stringify(event.suggestion),
-        );
-        return result;
-      },
+}, {
+  actions: {
+    startTracing: () => {
+      const runtimeFacade = new RuntimeFacade();
+      runtimeFacade.startTracing();
     },
-    actions: {
-      startTracing: () => {
-        const runtimeFacade = new RuntimeFacade();
-        runtimeFacade.startTracing();
-      },
-      stopTracing: () => {
-        const runtimeFacade = new RuntimeFacade();
-        runtimeFacade.stopTracing();
-      },
-      updateCurrentFile: assign({
-        currentFile: (_, event: { file?: string }) => event?.file ?? null,
-      }),
-      updateSelectedFunction: assign({
-        selectedFunction: (_, event: { functionName?: string }) =>
-          event?.functionName ?? null,
-      }),
-      addLiveEvent: assign({
-        // liveEvents: (context: DevTraceContext, event: { type: "addLiveEvent"; event: Record<string, unknown> }) => [
-        //   ...context.liveEvents,
-        //   event.event,
-        // ],
-      }),
-      clearLiveEvents: assign({
-        liveEvents: [],
-      }),
-      addHotswapHistoryEntry: assign({
-        // hotswapHistory: (context: DevTraceContext, event) => [
-        //   ...context.hotswapHistory,
-        //   (event as { entry: { timestamp: number; details: string } }).entry,
-        // ],
-      }),
-      clearHotswapHistory: assign({
-        hotswapHistory: [],
-      }),
-      // Add handleNewData action if needed
-      handleNewData: () => {
-        // Implement handling of NEW_DATA event
-      },
+    stopTracing: () => {
+      const runtimeFacade = new RuntimeFacade();
+      runtimeFacade.stopTracing();
+    },
+    handleNewData: (event: DevTraceEvent) => {
+      if (event.type === "NEW_DATA" && 'data' in event) {
+        devTraceActor.send({ type: "addLiveEvent", event: event.data as LiveEvent });
+      }
     },
   },
-);
+  services: {
+    analyzeCode: async () => {
+      const runtimeFacade = new RuntimeFacade();
+      return await runtimeFacade.analyzeCode();
+    },
+    processFlow: async (context: DevTraceContext) => {
+      const runtimeFacade = new RuntimeFacade();
+      if (!context.selectedFunction) throw new Error("No function selected");
+      return await runtimeFacade.generateFlowData(context.selectedFunction);
+    },
+    startLiveTrace: (devTraceActor: any) => {
+      const webview = vscode.window.createWebviewPanel(
+        "liveTrace",
+        "Live Trace",
+        vscode.ViewColumn.One,
+        {
+          enableScripts: true,
+        }
+      );
 
-export const devTraceActor = createActor(devTraceMachine, {
-  id: "devTraceActor",
-  logger: (event: DevTraceEvent) => console.log("Event:", event),
+      const runtimeFacade = new RuntimeFacade();
+      return runtimeFacade.startLiveTrace(devTraceActor, webview);
+    },
+    performHotswap: async (context: DevTraceContext) => {
+      const runtimeFacade = new RuntimeFacade();
+      if (!context.stateId || !context.newCode) {
+        throw new Error("Missing hotswap parameters");
+      }
+      return await runtimeFacade.performHotswap("hotswap", context.stateId, context.newCode);
+    },
+    fetchSuggestions: async (context: DevTraceContext, event: FetchSuggestionsRequest) => {
+      const runtimeFacade = new RuntimeFacade();
+      if (!context.currentFile) throw new Error("No file selected");
+
+      const request: {
+        errorMessage: string;
+        filePath: string;
+        provider: {
+          type: AIProvider;
+          apiKey: string;
+          temperature: number;
+        };
+        contextLines: number;
+        maxSuggestions: number;
+      } = {
+        errorMessage: event.errorMessage,
+        filePath: context.currentFile,
+        provider: {
+          type: context.aiProvider,
+          apiKey: context.apiKey,
+          temperature: 0.7 // Default temperature
+        },
+        contextLines: 5, // Default context lines
+        maxSuggestions: 3 // Default max suggestions
+      };
+
+      const response = await runtimeFacade.fetchSuggestions(
+        request.errorMessage,
+        request.filePath,
+        request.provider.type,
+        request.provider.apiKey
+      );
+
+      return (response as AISuggestion[]).reduce((acc: Record<string, AISuggestion>, suggestion: AISuggestion) => {
+        acc[suggestion.id] = {
+          id: suggestion.id,
+          description: suggestion.description,
+          confidence: suggestion.confidence ?? 0,
+          type: suggestion.type ?? "fix",
+          impact: suggestion.impact ?? "medium",
+          codeSnippet: suggestion.codeSnippet ?? "",
+          metadata: suggestion.metadata ?? {
+            imports: [],
+            affectedFunctions: [],
+            breakingChanges: false
+          }
+        };
+        return acc;
+      }, {} as Record<string, AISuggestion>),
+      
+    },
+    applySuggestion: async (context: DevTraceContext, event: { suggestion: Record<string, unknown> }) => {
+      const runtimeFacade = new RuntimeFacade();
+      if (!context.currentFile) throw new Error("No file selected");
+      return await runtimeFacade.applySuggestion(
+        context.currentFile,
+        JSON.stringify(event.suggestion)
+      );
+    },
+  },
 });
+
+
+export type DevTraceMachineState = StateFrom<typeof devTraceMachine>;
+export const devTraceActor = createActor(devTraceMachine);
+devTraceActor.start();
