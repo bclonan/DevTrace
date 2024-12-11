@@ -1,77 +1,92 @@
-## DevTrace AI - VS Code Extension
+# DevTrace AI - VS Code Extension
 
 **Level up your debugging with AI-powered insights and live code manipulation!**
 
 DevTrace AI is a powerful VS Code extension that reimagines debugging with features like:
 
-* **Insight Mode:**  Automatically analyzes your code for potential issues and suggests fixes.
-* **Flow Mode:** Visualizes the execution flow of your functions, helping you understand how data moves through your application.
-* **Live Trace Mode:**  Streams real-time diagnostics, showing you errors and events as they happen.
-* **Hotswap Mode:**  Lets you rollback to previous states, apply AI-powered or manual fixes, and continue execution without restarting.
+*   **Insight Mode:** Automatically analyzes your code for potential issues and suggests fixes.
+*   **Flow Mode:** Visualizes the execution flow of your functions, helping you understand how data moves through your application.
+*   **Live Trace Mode:** Streams real-time diagnostics, showing you errors and events as they happen.
+*   **Hotswap Mode:** Lets you rollback to previous states, apply AI-powered or manual fixes, and continue execution without restarting.
 
 ### Getting Started
 
 **1. Installation**
 
-* Clone this repository to your local machine.
-* Open the project folder in VS Code.
-* Run `npm install` to install the dependencies.
+*   Clone this repository to your local machine: `git clone https://github.com/bclonan/DevTrace.git` (replace with your repo URL if forked).
+*   Open the project folder in VS Code.
+*   Install the project dependencies: `npm install`
 
-**2. Configuration**
+**2. Backend Setup**
 
-* **Backend:**
-    *   Start the backend server by running `npm run start`. This will start the Express.js server on `http://localhost:3000`.
-* **Extension:**
-    *   Open the `src/stateMachine.ts` file and configure the `aiProvider` and `apiKey` in the machine's context based on your preferred AI provider (OpenAI, Anthropic, or Google AI).
-    *   (Optional) If you want to use GitHub Copilot for suggestions, ensure that the GitHub Copilot extension is installed and enabled in VS Code.
+*   Navigate to the backend directory: `cd src/backend`
+*   Start the backend server: `npm run start`. This will start the Express.js server on `http://localhost:3000`. Ensure the server is running before starting the extension.
 
-**3. Running the Extension**
+**3. Extension Configuration**
 
-* Press `F5` to start the extension in debug mode. This will open a new VS Code window with the extension loaded.
-* Open a Node.js project in the new window.
-* Use the commands in the Command Palette (`Ctrl+Shift+P`) to interact with the extension:
-    *   `DevTrace: Start Insight Mode`
-    *   `DevTrace: Start Flow Mode`
-    *   `DevTrace: Start Live Trace Mode`
-    *   `DevTrace: Start Hotswap Mode`
-    *   `DevTrace: Analyze`
-    *   `DevTrace: Generate Flow`
-    *   `DevTrace: Stream Live Events`
-    *   `DevTrace: Rollback`
-    *   `DevTrace: Apply Fix`
-    *   `DevTrace: Play Forward`
-    *   `DevTrace: Exit`
+*   Open the `src/stateMachine.ts` file.
+*   Configure the `aiProvider` and `apiKey` in the machine's context. Choose your preferred AI provider (e.g., "openai").
+*   If using OpenAI, set your API key. Example:
 
-**4. Publishing the Extension**
+```typescript
+context: {
+    // ... other context properties
+    aiProvider: "openai",
+    apiKey: "YOUR_OPENAI_API_KEY", // Replace with your actual key
+},
+```
 
-*   Create a publisher account on the VS Code Marketplace.
-*   Install the `vsce` (Visual Studio Code Extensions) CLI: `npm install -g vsce`.
-*   Update the `package.json` file with your extension details (publisher name, description, etc.).
-*   Package the extension: `vsce package`.
-*   Publish the extension: `vsce publish`.
+*   (Optional) If you want to use GitHub Copilot for suggestions, ensure that the GitHub Copilot extension is installed and enabled in VS Code.
+
+**4. Running the Extension in VS Code**
+
+*   Open the root of the DevTrace project in VS Code.
+*   Press `F5` to start the extension in debug mode. This will open a new VS Code window with the extension loaded.
+*   Open a Node.js project in the new VS Code window where you want to use DevTrace.
+
+**5. Using DevTrace Commands**
+
+*   Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
+*   Type `DevTrace` to see the available commands:
+    *   `DevTrace: Start Insight Mode`: Starts the code analysis and suggestion process.
+    *   `DevTrace: Start Flow Mode`: Starts the function flow visualization.
+    *   `DevTrace: Start Live Trace Mode`: Starts streaming real-time diagnostics.
+    *   `DevTrace: Start Hotswap Mode`: Enables code hot-swapping.
+    *   `DevTrace: Analyze`: Triggers an analysis in Insight Mode.
+    *   `DevTrace: Generate Flow`: Triggers flow generation in Flow Mode.
+    *   `DevTrace: Rollback`: Rolls back code changes in Hotswap Mode.
+    *   `DevTrace: Apply Fix`: Applies an AI-suggested or manual fix.
+    *   `DevTrace: Exit`: Exits the current DevTrace mode.
+
+**Example Workflow**
+
+1.  Open a Node.js project in VS Code.
+2.  Start the DevTrace backend (`npm run start` in the `src/backend` directory).
+3.  Start the DevTrace extension (`F5`).
+4.  Open the Command Palette and run `DevTrace: Start Insight Mode`.
+5.  DevTrace will analyze your code and display potential issues and suggestions.
+6.  Use other commands as needed to explore Flow Mode, Live Trace Mode, or Hotswap Mode.
 
 ### Features in Detail
 
-* **Insight Mode:**
-    *   Automatically analyzes your code for potential issues using static analysis and runtime data.
+*   **Insight Mode:**
+    *   Automatically analyzes your code for potential issues using static analysis and runtime data (when available).
     *   Provides clear descriptions of the issues and their severity.
     *   Offers AI-powered code suggestions to fix the issues.
-* **Flow Mode:**
+*   **Flow Mode:**
     *   Visualizes the execution flow of your functions using a graph.
-    *   Shows how data moves through your application, making it easier to understand complex logic.
-    *   Highlights performance bottlenecks and potential areas for optimization.
-* **Live Trace Mode:**
-    *   Streams real-time diagnostics, showing you errors, logs, and other events as they happen.
-    *   Helps you identify and debug issues quickly in dynamic environments.
-    *   Provides insights into the behavior of your application under different conditions.
-* **Hotswap Mode:**
-    *   Lets you rollback to previous states of your application, allowing you to "rewind" execution.
-    *   Enables you to apply AI-powered or manual fixes to your code without restarting the application.
-    *   Helps you experiment with different solutions and see their impact immediately.
+    *   Shows how data moves through your application.
+    *   Helps identify performance bottlenecks.
+*   **Live Trace Mode:**
+    *   Streams real-time diagnostics (errors, logs, events).
+    *   Helps you identify and debug issues quickly.
+*   **Hotswap Mode:**
+    *   Lets you rollback to previous states.
+    *   Enables applying fixes without restarting.
 
 ### Contributing
 
-Contributions are welcome! Feel free to open issues or submit pull requests to improve the extension.
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ### License
 
