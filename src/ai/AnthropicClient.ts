@@ -1,6 +1,6 @@
 // src/ai/AnthropicClient.ts
 
-import { AIModelClient } from './AIModelClient.ts';
+import { AIModelClient } from "./AIModelClient.ts";
 // Import the Anthropic client library
 
 /**
@@ -24,7 +24,10 @@ export class AnthropicClient implements AIModelClient {
    * @param currentFile The current file being edited.
    * @returns A Promise that resolves to an array of suggestions.
    */
-  async fetchSuggestions(errorMessage: string, currentFile: string): Promise<{ description: string; codeSnippet: string }[]> {
+  fetchSuggestions(
+    _errorMessage: string,
+    _currentFile: string,
+  ): Promise<{ description: string; codeSnippet: string }[]> {
     try {
       // Use the Anthropic client library to fetch suggestions
       // ...
@@ -33,9 +36,9 @@ export class AnthropicClient implements AIModelClient {
         // ... format the suggestions as needed
       ];
 
-      return suggestions;
+      return Promise.resolve(suggestions);
     } catch (error) {
-      console.error('Error fetching suggestions from Anthropic:', error);
+      console.error("Error fetching suggestions from Anthropic:", error);
       throw error;
     }
   }

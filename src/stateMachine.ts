@@ -1,31 +1,76 @@
 // src/stateMachine.ts
 
 import { assign, createActor, createMachine } from "xstate";
+import { AIProvider } from "./ai/AIModelFactory.ts"; // Import AIProvider from the correct module
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
-
-// Define or import the AIProvider type
-type AIProvider = "openai" | "otherProvider"; // Add other providers as needed
 
 /**
  * The DevTrace state machine definition.
  * This machine manages the different states and transitions of the DevTrace AI extension.
  */
 interface DevTraceContext {
-  analysisResults?: any;
+  analysisResults?: Record<string, unknown>;
   errorMessage?: string;
-  flowResults?: any;
-  traceResults?: any;
-  hotswapResults?: any;
+  flowResults?: Record<string, unknown>;
+  traceResults?: Record<string, unknown>;
+  hotswapResults?: Record<string, unknown>;
   currentFile: string | null;
   selectedFunction: string | null;
-  liveEvents: any[];
-  hotswapHistory: any[];
+  liveEvents: { type: string; payload: unknown }[];
+  hotswapHistory: { timestamp: number; details: string }[];
   aiProvider: AIProvider;
   apiKey: string;
   suggestions?: any;
 }
 
-export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, DevTraceTypeState>(
+type DevTraceEvent =
+  | { type: "exit" }
+  | { type: "start.insightMode" }
+  | { type: "start.flowMode" }
+  | { type: "start.liveTraceMode" }
+  | { type: "start.hotswapMode" }
+  | { type: "analyze" }
+  | { type: "fetchSuggestions" }
+  | { type: "applySuggestion" }
+  | { type: "process"; data: { functionName: string } }
+  | { type: "trace" }
+  | { type: "swap" }
+  | { type: "rollback"; stateId: string }
+  | { type: "applyFix"; stateId: string; newCode: string }
+  | { type: "playForward"; stateId: string }
+  | { type: "streamLiveEvents" }
+  | { type: "generateFlow"; functionName: string }
+  | {
+    type: "stateChanged";
+    state: string;
+    liveEvents: any;
+    errorMessage: string;
+  }
+  | { type: "error"; errorMessage: string }
+  | { type: "entry"; entry: any }
+  | { type: "exit"; exit: any }
+  | { type: "event"; event: any }
+  | { type: "fetchSuggestions"; errorMessage: string }
+  | { type: "applySuggestion"; suggestion: any }
+  | { type: "updateCurrentFile"; file: string }
+  | { type: "updateSelectedFunction"; functionName: string }
+  | { type: "addLiveEvent"; event: any }
+  | { type: "clearLiveEvents" }
+  | { type: "addHotswapHistoryEntry"; entry: any }
+  | { type: "clearHotswapHistory" };
+
+type DevTraceTypeState =
+  | { value: "idle"; context: DevTraceContext }
+  | { value: "insightMode"; context: DevTraceContext }
+  | { value: "flowMode"; context: DevTraceContext }
+  | { value: "liveTraceMode"; context: DevTraceContext }
+  | { value: "hotswapMode"; context: DevTraceContext };
+
+export const devTraceMachine = createMachine<
+  DevTraceContext,
+  DevTraceEvent,
+  DevTraceTypeState
+>(
   {
     /**
      * The machine context.
@@ -445,7 +490,7 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, Dev
             },
             send: (message) => {
               // Implement the send method
-            }
+            },
           });
           return results;
         } else {
@@ -475,7 +520,7 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, Dev
        * Action to update the selected function in the context.
        */
       updateSelectedFunction: assign({
-        selectedFunction: (_, event) => event.functionName,
+        selectedFunction: (_, event) => event?.functionName ?? null,
       }),
 
       /**
@@ -558,14 +603,17 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, Dev
           const suggestions = await runtimeFacade.fetchSuggestions(
             event.errorMessage,
             context.currentFile ?? "",
-            context.aiProvider,
+            context.aiProvider as AIProvider,
             context.apiKey,
           );
           return suggestions;
         },
         id: "fetchSuggestionsActor",
       }),
-      applySuggestion: (context: DevTraceContext, event: { suggestion: any }) => ({
+      applySuggestion: (
+        context: DevTraceContext,
+        event: { suggestion: any },
+      ) => ({
         src: async () => {
           const runtimeFacade = new RuntimeFacade();
           const result = await runtimeFacade.applySuggestion(

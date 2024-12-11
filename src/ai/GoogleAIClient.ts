@@ -24,7 +24,7 @@ export class GoogleAIClient implements AIModelClient {
      * @param currentFile The current file being edited.
      * @returns A Promise that resolves to an array of suggestions.
      */
-    async fetchSuggestions(
+    fetchSuggestions(
         errorMessage: string,
         currentFile: string,
     ): Promise<{ description: string; codeSnippet: string }[]> {

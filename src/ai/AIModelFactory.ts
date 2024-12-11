@@ -1,13 +1,13 @@
-import { OpenAIClient } from './OpenAIClient.ts';
-import { AnthropicClient } from './AnthropicClient.ts';
-import { GoogleAIClient } from './GoogleAIClient.ts';
-import { GithubCopilotClient } from './GithubCopilotClient.ts';
+import { AnthropicClient } from "./AnthropicClient.ts";
+import { GithubCopilotClient } from "./GithubCopilotClient.ts";
+import { GoogleAIClient } from "./GoogleAIClient.ts";
+import { OpenAIClient } from "./OpenAIClient.ts";
 
 export enum AIProvider {
-  OpenAI = 'openai',
-  Anthropic = 'anthropic',
-  Google = 'google',
-  GithubCopilot = 'github',
+  OpenAI = "openai",
+  Anthropic = "anthropic",
+  Google = "google",
+  GithubCopilot = "github",
 }
 
 export class AIModelFactory {
@@ -20,7 +20,7 @@ export class AIModelFactory {
       case AIProvider.Google:
         return new GoogleAIClient(apiKey);
       case AIProvider.GithubCopilot:
-        return new GithubCopilotClient(apiKey);
+        return new GithubCopilotClient();
       default:
         throw new Error(`Unsupported AI provider: ${provider}`);
     }
