@@ -358,9 +358,85 @@ export type FetchSuggestionsRequest = {
     maxSuggestions?: number;
 };
 
+export interface AnalyzeCodeActor {
+    input: undefined;
+    output: AnalyzeResponse;
+}
+
+export interface ProcessFlowActor {
+    input: undefined;
+    output: ProcessFlowResponse;
+}
+
+export interface StartLiveTraceActor {
+    input: undefined;
+    output: StartLiveTraceResponse;
+}
+
+export interface PerformHotswapActor {
+    input: undefined;
+    output: PerformHotswapResponse;
+}
+
+export interface FetchSuggestionsActor {
+    input: FetchSuggestionsRequest;
+    output: FetchSuggestionsResponse;
+}
+
+export interface ApplySuggestionActor {
+    input: { suggestion: AISuggestion };
+    output: boolean;
+}
+
+export type ActorTypes = {
+    analyzeCode: AnalyzeCodeActor;
+    processFlow: ProcessFlowActor;
+    startLiveTrace: StartLiveTraceActor;
+    performHotswap: PerformHotswapActor;
+    fetchSuggestions: FetchSuggestionsActor;
+    applySuggestion: ApplySuggestionActor;
+}
+
+export interface ActorLogic {
+    analyzeCode: {
+        src: typeof analyzeCodeLogic;
+        logic: ProvidedActor['logic'];
+    };
+    processFlow: {
+        src: typeof processFlowLogic;
+        logic: ProvidedActor['logic'];
+    };
+    startLiveTrace: {
+        src: typeof startLiveTraceLogic;
+        logic: ProvidedActor['logic'];
+    };
+    performHotswap: {
+        src: typeof performHotswapLogic;
+        logic: ProvidedActor['logic'];
+    };
+    fetchSuggestions: {
+        src: typeof fetchSuggestionsLogic;
+        logic: ProvidedActor['logic'];
+    };
+    applySuggestion: {
+        src: typeof applySuggestionLogic;
+        logic: ProvidedActor['logic'];
+    };
+}
+
+export type MachineActors = {
+    analyzeCode: { data: AnalyzeResponse };
+    processFlow: { data: ProcessFlowResponse };
+    startLiveTrace: { data: StartLiveTraceResponse };
+    performHotswap: { data: PerformHotswapResponse };
+    fetchSuggestions: { data: FetchSuggestionsResponse };
+    applySuggestion: { data: boolean };
+};
+
 
 // Additional exports
 export * from './events';
 export * from './runtime';
 export * from './services';
+export * from './stateMachine';
 

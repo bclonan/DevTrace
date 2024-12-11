@@ -1,8 +1,25 @@
 import * as vscode from 'vscode';
-import { assign, createActor, createMachine, type StateFrom } from "xstate";
+import { assign, createActor, createMachine, ProvidedActor, type StateFrom } from "xstate";
+import axios from "axios";
 import { AIProvider } from "./ai/AIModelFactory";
 import { RuntimeFacade } from "./services/RuntimeFacade";
-import type { AISuggestion, LiveEvent, FetchSuggestionsRequest } from "./types";
+import { NodeAdapter } from "./runtimeAdapters/NodeAdapter";
+import type {
+  AISuggestion,
+  LiveEvent,
+  FetchSuggestionsRequest,
+  FetchSuggestionsResponse,
+  ProcessFlowRequest,
+  ProcessFlowResponse,
+  StartLiveTraceRequest,
+  StartLiveTraceResponse,
+  PerformHotswapRequest,
+  PerformHotswapResponse,
+  AnalyzeRequest,
+  AnalyzeResponse,
+  ActorTypes,
+  MachineActors
+} from "./types";
 
 type DevTraceContext = {
   analysisResults?: Record<string, unknown>;
@@ -44,12 +61,24 @@ type DevTraceEvent =
   | { type: "clearLiveEvents" }
   | { type: "addHotswapHistoryEntry"; entry: { timestamp: number; details: string } }
   | { type: "clearHotswapHistory" }
+  | { type: "addSuggestion"; suggestion: AISuggestion }
+  | { type: "clearSuggestions" }
+  | { type: "setAIProvider"; provider: AIProvider }
+  | { type: "setAPIKey"; apiKey: string }
+  | { type: "setNewCode"; newCode: string }
+  | { type: "setSelectedFunction"; functionName: string }
   | { type: "NEW_DATA"; data: LiveEvent };
+
+
+
+
 
 export const devTraceMachine = createMachine({
   types: {} as {
     context: DevTraceContext;
     events: DevTraceEvent;
+    actors: MachineActors
+
   },
   id: "devTraceAI",
   context: {
@@ -190,7 +219,7 @@ export const devTraceMachine = createMachine({
           },
           on: {
             NEW_DATA: {
-              actions: ["handleNewData", assign((context: DevTraceContext, event: DevTraceEvent) => {
+              actions: ["handleNewData", assign((context: any, event: any) => {
                 if (event.type === "NEW_DATA") {
                   return {
                     ...context,
@@ -202,24 +231,13 @@ export const devTraceMachine = createMachine({
             },
             addLiveEvent: {
               target: undefined,
-              actions: [
-                assign({
-                  liveEvents: (context: DevTraceContext, event: DevTraceEvent & { event: LiveEvent }) => ({
-                    liveEvents: [...context.liveEvents, event.event]
-                  })
-                })
-              ]
-            },
-            NEW_DATA: {
-              actions: assign((context: DevTraceContext, event: DevTraceEvent) => {
-                if (event.type === "NEW_DATA") {
-                  return {
-                    ...context,
-                    liveEvents: [...context.liveEvents, event.data as LiveEvent]
-                  };
-                }
-                return context;
-              })
+              // actions: [
+              //   assign({
+              //     liveEvents: (context: DevTraceContext, event: DevTraceEvent & { event: LiveEvent }) => ({
+              //       liveEvents: [...context.liveEvents, event.event]
+              //     })
+              //   })
+              // ]
             }
           }
         },
@@ -282,13 +300,11 @@ export const devTraceMachine = createMachine({
       const runtimeFacade = new RuntimeFacade();
       runtimeFacade.stopTracing();
     },
-    handleNewData: (event: DevTraceEvent) => {
-      if (event.type === "NEW_DATA" && 'data' in event) {
-        devTraceActor.send({ type: "addLiveEvent", event: event.data as LiveEvent });
-      }
+    handleNewData: (context, event) => {
+      console.log("New data received", event);
     },
   },
-  services: {
+  actors: {
     analyzeCode: async () => {
       const runtimeFacade = new RuntimeFacade();
       return await runtimeFacade.analyzeCode();
@@ -317,6 +333,14 @@ export const devTraceMachine = createMachine({
         throw new Error("Missing hotswap parameters");
       }
       return await runtimeFacade.performHotswap("hotswap", context.stateId, context.newCode);
+    },
+    applySuggestion: async (context: DevTraceContext, event: { suggestion: Record<string, unknown> }) => {
+      const runtimeFacade = new RuntimeFacade();
+      if (!context.currentFile) throw new Error("No file selected");
+      return await runtimeFacade.applySuggestion(
+        context.currentFile,
+        JSON.stringify(event.suggestion)
+      );
     },
     fetchSuggestions: async (context: DevTraceContext, event: FetchSuggestionsRequest) => {
       const runtimeFacade = new RuntimeFacade();
@@ -367,15 +391,6 @@ export const devTraceMachine = createMachine({
         };
         return acc;
       }, {} as Record<string, AISuggestion>),
-      
-    },
-    applySuggestion: async (context: DevTraceContext, event: { suggestion: Record<string, unknown> }) => {
-      const runtimeFacade = new RuntimeFacade();
-      if (!context.currentFile) throw new Error("No file selected");
-      return await runtimeFacade.applySuggestion(
-        context.currentFile,
-        JSON.stringify(event.suggestion)
-      );
     },
   },
 });
