@@ -1,0 +1,60 @@
+/* src/ui/media/styles.css */
+
+body {
+  background-color: #1e1e1e; /* VS Code dark background */
+  color: #ffffff; /* White text */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 1.2em;
+  color: #c8c8c8; /* Lighter gray for secondary info */
+}
+
+.results-container,
+.events-container,
+.history-container,
+.flow-container {
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.results-container > div,
+.events-container > div,
+.history-container > div {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background-color: #2a2a2a; /* Slightly darker gray */
+}
+
+.error-message {
+  color: #f44336; /* Red for errors */
+  padding: 10px;
+  font-weight: bold;
+}
+
+.suggestions-container {
+  padding: 10px;
+}
+
+.suggestion {
+  background-color: #2a2a2a;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.suggestion:hover {
+  background-color: #333333;
+}
+
+.suggestion.selected {
+  background-color: #4fc3f7; /* Light blue accent */
+  color: #1e1e1e; /* Dark background for contrast */
+}
