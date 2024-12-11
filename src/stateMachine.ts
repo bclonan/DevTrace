@@ -1,13 +1,31 @@
 // src/stateMachine.ts
 
 import { assign, createActor, createMachine } from "xstate";
-import { RuntimeFacade } from "./services/RuntimeFacade";
+import { RuntimeFacade } from "./services/RuntimeFacade.ts";
+
+// Define or import the AIProvider type
+type AIProvider = "openai" | "otherProvider"; // Add other providers as needed
 
 /**
  * The DevTrace state machine definition.
  * This machine manages the different states and transitions of the DevTrace AI extension.
  */
-export const devTraceMachine = createMachine(
+interface DevTraceContext {
+  analysisResults?: any;
+  errorMessage?: string;
+  flowResults?: any;
+  traceResults?: any;
+  hotswapResults?: any;
+  currentFile: string | null;
+  selectedFunction: string | null;
+  liveEvents: any[];
+  hotswapHistory: any[];
+  aiProvider: AIProvider;
+  apiKey: string;
+  suggestions?: any;
+}
+
+export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, DevTraceTypeState>(
   {
     /**
      * The machine context.
@@ -20,12 +38,13 @@ export const devTraceMachine = createMachine(
       traceResults: undefined,
       hotswapResults: undefined,
       // Add other context variables as needed, e.g.,
-      currentFile: null, // Currently active file in the editor
+      currentFile: null as string | null, // Currently active file in the editor
       selectedFunction: null, // Currently selected function for flow analysis
       liveEvents: [], // Array to store live events
       hotswapHistory: [], // Array to store hotswap history
-      aiProvider: "openai", // Default AI provider
+      aiProvider: "openai" as AIProvider, // Default AI provider
       apiKey: "", // API key for the AI provider
+      suggestions: undefined, // Suggestions from the AI provider
     },
     /**
      * The unique identifier for the machine.
@@ -125,7 +144,8 @@ export const devTraceMachine = createMachine(
              * Invoke the `analyzeCode` service to perform the analysis.
              */
             invoke: {
-              src: "analyzeCode",
+              src: (context: any, _event: any) =>
+                context.services.analyzeCode(),
               /**
                * When the service finishes successfully, transition to `results`.
                */
@@ -134,7 +154,7 @@ export const devTraceMachine = createMachine(
                 /**
                  * Assign the analysis results to the `analysisResults` context variable.
                  */
-                actions: assign<{ analysisResults: any }>({
+                actions: assign({
                   analysisResults: (_, event: { data: any }) =>
                     event ? event.data : undefined,
                 }),
@@ -401,13 +421,7 @@ export const devTraceMachine = createMachine(
       /**
        * Action to analyze code.
        */
-      analyzeCode: async () => {
-        // Call the RuntimeFacade to analyze the code
-        const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.analyzeCode();
-        // ... any other actions needed to analyze the code
-        return results;
-      },
+      // Removed analyzeCode from actions
       /**
        * Action to process flow.
        */
@@ -421,10 +435,22 @@ export const devTraceMachine = createMachine(
       /**
        * Action to start live trace.
        */
-      startLiveTrace: async () => {
+      startLiveTrace: async (context: DevTraceContext) => {
         // Call the RuntimeFacade to start live trace
         const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.startLiveTrace();
+        if (context.currentFile && context.selectedFunction) {
+          const results = await runtimeFacade.startLiveTrace({
+            subscribe: (callback) => {
+              // Implement the subscribe method
+            },
+            send: (message) => {
+              // Implement the send method
+            }
+          });
+          return results;
+        } else {
+          throw new Error("currentFile or selectedFunction is null");
+        }
         // ... any other actions needed to start live trace
         return results;
       },
@@ -442,7 +468,7 @@ export const devTraceMachine = createMachine(
        * Action to update the current file in the context.
        */
       updateCurrentFile: assign({
-        currentFile: (_, event) => event.file,
+        currentFile: (_, event: { file?: string }) => event?.file ?? null,
       }),
 
       /**
@@ -519,12 +545,19 @@ export const devTraceMachine = createMachine(
         },
         id: "performHotswapActor",
       }),
-      fetchSuggestions: (context, event) => ({
+      fetchSuggestions: (
+        context: {
+          currentFile: string | null;
+          aiProvider: string;
+          apiKey: string;
+        },
+        event: { errorMessage: string },
+      ) => ({
         src: async () => {
           const runtimeFacade = new RuntimeFacade();
           const suggestions = await runtimeFacade.fetchSuggestions(
             event.errorMessage,
-            context.currentFile,
+            context.currentFile ?? "",
             context.aiProvider,
             context.apiKey,
           );
@@ -532,11 +565,11 @@ export const devTraceMachine = createMachine(
         },
         id: "fetchSuggestionsActor",
       }),
-      applySuggestion: (context, event) => ({
+      applySuggestion: (context: DevTraceContext, event: { suggestion: any }) => ({
         src: async () => {
           const runtimeFacade = new RuntimeFacade();
           const result = await runtimeFacade.applySuggestion(
-            context.currentFile,
+            context.currentFile ?? "",
             event.suggestion,
           );
           return result;
@@ -552,6 +585,7 @@ export const devTraceMachine = createMachine(
  * This actor is used to interpret the state machine and manage its execution.
  */
 export const devTraceActor = createActor(devTraceMachine, {
+  devTools: true, // Enable devtools for debugging (if available in your environment)
   id: "devTraceActor", // Assign an ID to the actor
   // ... other configuration options for the actor, e.g.,
   devTools: true, // Enable devtools for debugging (if available in your environment)
@@ -560,3 +594,5 @@ export const devTraceActor = createActor(devTraceMachine, {
 
 // You can now start the actor using devTraceActor.start()
 // and interact with it using devTraceActor.send()
+
+export const devTraceService = devTraceActor.start();

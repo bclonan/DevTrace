@@ -1,5 +1,5 @@
 // Handle messages from the extension
-window.addEventListener('message', (event) => {
+globalThis.addEventListener('message', (event) => {
   const message = event.data;
   switch (message.type) {
     case 'stateChanged': {

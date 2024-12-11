@@ -158,7 +158,7 @@ function displaySuggestions(suggestions) {
   const suggestionsContainer = document.getElementById('suggestions');
   suggestionsContainer.innerHTML = ''; // Clear previous suggestions
 
-  suggestions.forEach((suggestion, index) => {
+  suggestions.forEach((suggestion, _index) => {
     const suggestionElement = document.createElement('div');
     suggestionElement.classList.add('suggestion');
     suggestionElement.textContent = suggestion.description;

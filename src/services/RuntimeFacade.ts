@@ -1,8 +1,6 @@
-// src/services/RuntimeFacade.ts
-
 import axios from "axios";
-import { AIProvider } from "../ai/AIModelFactory";
-import { NodeAdapter } from "../runtimeAdapters/NodeAdapter";
+import { AIProvider } from "../ai/AIModelFactory.ts";
+import { NodeAdapter } from "../runtimeAdapters/NodeAdapter.ts";
 
 /**
  * The RuntimeFacade class.
@@ -148,12 +146,15 @@ export class RuntimeFacade {
     apiKey: string,
   ) {
     try {
-      const response = await axios.post("http://localhost:3000/ai/suggestFix", {
-        errorMessage,
-        currentFile,
-        aiProvider,
-        apiKey,
-      });
+      const response: { data: any } = await axios.post(
+        "http://localhost:3000/ai/suggestFix",
+        {
+          errorMessage,
+          currentFile,
+          aiProvider,
+          apiKey,
+        },
+      );
       return response.data.suggestions;
     } catch (error) {
       console.error("Error fetching suggestions:", error);
@@ -169,7 +170,7 @@ export class RuntimeFacade {
    */
   async applySuggestion(currentFile: string, suggestion: string) {
     try {
-      const response = await axios.post(
+      const response: { data: any } = await axios.post(
         "http://localhost:3000/code/applySuggestion",
         {
           currentFile,
@@ -182,4 +183,449 @@ export class RuntimeFacade {
       throw error;
     }
   }
+
+  /**
+   * Performs a hotswap operation.
+   * @param action The action to perform.
+   * @param stateId The ID of the state to perform the action on.
+   * @param newCode The new code to apply (if applicable).
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to perform hotswap operations such as rollback, apply fix, and play forward.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.performHotswap("rollback", "1234");
+   * console.log(response);
+   * ```
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.performHotswap("applyFix", "1234", "if(!user) return;");
+   * console.log(response);
+   * ```
+   */
+  async performHotswap(action: string, stateId: string, newCode?: string) {
+    try {
+      const response = await axios.post("http://localhost:3000/hotswap", {
+        action,
+        stateId,
+        newCode,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error performing hotswap operation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Starts a live trace session.
+   * @param devTraceActor The DevTrace state machine actor.
+   * @param webviewView The webview view.
+   * @remarks This method is used to start a live trace session and stream live events to the webview.
+   * @example
+   * ```typescript
+   * runtimeFacade.startLiveTrace(devTraceActor, webviewView);
+   * ```
+   * @example
+   * ```typescript
+   * runtimeFacade.startLiveTrace(devTraceActor, webviewView);
+   * ```
+   */
+  async startLiveTrace(
+    devTraceActor: {
+      subscribe: (callback: (state: any) => void) => void;
+      send: (message: { type: string }) => void;
+    },
+    webviewView: {
+      webview: {
+        postMessage: (message: any) => void;
+        onDidReceiveMessage: (callback: (message: any) => void) => void;
+      };
+    },
+  ) {
+    // Listen for state changes
+    devTraceActor.subscribe((state: any) => {
+      // Send the current state to the webview
+      webviewView.webview.postMessage({
+        type: "stateChanged",
+        state: state.value,
+        liveEvents: state.context.liveEvents,
+        errorMessage: state.context.errorMessage,
+      });
+    });
+
+    // Handle messages from the webview
+    webviewView.webview.onDidReceiveMessage((message: any) => {
+      switch (message.type) {
+        case "startTracing":
+          devTraceActor.send({ type: "trace" });
+          break;
+        case "stopTracing":
+          devTraceActor.send({ type: "exit" });
+          break;
+          // ... handle other messages from the webview
+      }
+    });
+
+    // Start tracing
+    devTraceActor.send({ type: "trace" });
+
+    // Stream live events
+    devTraceActor.send({ type: "streamLiveEvents" });
+  }
+
+  /**
+   * process flow data
+   * @param flowData The flow data to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process flow data.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processFlowData(flowData);
+   * console.log(response);
+   * ```
+   */
+  async processFlowData(flowData: any) {
+    try {
+      const response: { data: any } = await axios.post(
+        "http://localhost:3000/flow/process",
+        {
+          flowData,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing flow data:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process live event
+   * @param liveEvent The live event to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process live events.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processLiveEvent(liveEvent);
+   * console.log(response);
+   * ```
+   */
+  async processLiveEvent(liveEvent: any) {
+    try {
+      const response: { data: any } = await axios.post(
+        "http://localhost:3000/live/process",
+        {
+          liveEvent,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing live event:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process issue
+   * @param issue The issue to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process issues.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processIssue(issue);
+   * console.log(response);
+   * ```
+   */
+  async processIssue(issue: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/issue/process",
+        {
+          issue,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing issue:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process suggestion
+   * @param suggestion The suggestion to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process suggestions.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processSuggestion(suggestion);
+   * console.log(response);
+   * ```
+   */
+  async processSuggestion(suggestion: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/suggestion/process",
+        {
+          suggestion,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing suggestion:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process fix
+   * @param fix The fix to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process fixes.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processFix(fix);
+   * console.log(response);
+   * ```
+   */
+  async processFix(fix: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/fix/process",
+        {
+          fix,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing fix:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process trace
+   * @param trace The trace to process
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process traces.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processTrace(trace);
+   * console.log(response);
+   * ```
+   */
+  async processTrace(trace: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/trace/process",
+        {
+          trace,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing trace:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process state
+   * @param state The state to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process states.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processState(state);
+   * console.log(response);
+   * ```
+   */
+  async processState(state: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/state/process",
+        {
+          state,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing state:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process actor
+   * @param actor The actor to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process actors.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processActor(actor);
+   * console.log(response);
+   * ```
+   */
+  async processActor(actor: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/actor/process",
+        {
+          actor,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing actor:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process event
+   * @param event The event to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process events.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processEvent(event);
+   * console.log(response);
+   * ```
+   */
+  async processEvent(event: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/event/process",
+        {
+          event,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing event:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process metric
+   * @param metric The metric to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process metrics.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processMetric(metric);
+   * console.log(response);
+   * ```
+   */
+  async processMetric(metric: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/metric/process",
+        {
+          metric,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing metric:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process exception
+   * @param exception The exception to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process exceptions.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processException(exception);
+   * console.log(response);
+   * ```
+   */
+  async processException(exception: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/exception/process",
+        {
+          exception,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing exception:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process request
+   * @param request The request to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process requests.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processRequest(request);
+   * console.log(response);
+   * ```
+   */
+  async processRequest(request: any) {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/request/process",
+        {
+          request,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing request:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * process response
+   * @param res The response to process.
+   * @returns A Promise that resolves to the response from the backend.
+   * @throws An error if the operation fails.
+   * @remarks This method is used to process responses.
+   * @example
+   * ```typescript
+   * const response = await runtimeFacade.processResponse(res);
+   * console.log(response);
+   * ```
+   */
+  async processResponse(res: any) {
+    try {
+      const response: { data: any } = await axios.post(
+        "http://localhost:3000/response/process",
+        {
+          response: res,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error processing response:", error);
+      throw error;
+    }
+  }
+
+  
+
+  // ... other methods
 }
