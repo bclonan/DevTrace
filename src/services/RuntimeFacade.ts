@@ -1,7 +1,7 @@
 import axios from "axios";
 import { AIProvider } from "../ai/AIModelFactory.ts";
 import { NodeAdapter } from "../runtimeAdapters/NodeAdapter.ts";
-import { LiveEvent } from "../types.d.ts";
+import type { LiveEvent } from "../types.d.ts";
 
 /**
  * The RuntimeFacade class.

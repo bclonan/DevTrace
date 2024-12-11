@@ -128,6 +128,11 @@ export interface HotswapHistoryEntry {
     // ... other properties as needed
 }
 
+  interface DevTraceActorOptions {
+    id: string;
+    logger?: (event: DevTraceEvent) => void;
+  }
+
 /**
  * Interface for AI suggestion objects.
  */
@@ -140,18 +145,18 @@ export interface AISuggestion {
  * The state machine context.
  */
 export interface DevTraceContext {
-    analysisResults?: Issue[];
+    analysisResults?: Record<string, unknown>;
     errorMessage?: string;
-    flowResults?: FlowNode[];
-    traceResults?: LiveEvent[];
+    flowResults?: Record<string, unknown>;
+    traceResults?: Record<string, unknown>;
     hotswapResults?: Record<string, unknown>;
     currentFile: string | null;
     selectedFunction: string | null;
     liveEvents: LiveEvent[];
-    hotswapHistory: HotswapHistoryEntry[];
+    hotswapHistory: { timestamp: number; details: string }[];
     aiProvider: AIProvider;
     apiKey: string;
-    suggestions?: AISuggestion[];
+    suggestions?: Record<string, AISuggestion>;
     // Add other context variables as needed
     userPreferences?: Record<string, unknown>;
     sessionId?: string;
@@ -162,13 +167,14 @@ export interface DevTraceContext {
         isActive: boolean;
         startTime: Date;
         endTime?: Date;
-        [key: string]: string | number | boolean | Date | undefined;
     };
     performanceMetrics?: Record<string, unknown>;
     codeSnippets?: Record<string, string>;
     userNotes?: string[];
     activeTheme?: string;
     recentFiles?: string[];
+    stateId?: string;
+    newCode?: string;
 }
 
 /**

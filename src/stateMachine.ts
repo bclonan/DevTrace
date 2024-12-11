@@ -1,13 +1,13 @@
 // src/stateMachine.ts
 
+import EventSource from "eventsource";
+import * as vscode from "vscode";
 import { assign, createActor, createMachine } from "xstate";
-import { AIProvider } from "./ai/AIModelFactory.ts"; // Import AIProvider from the correct module
+import { AIProvider } from "./ai/AIModelFactory.ts";
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
+lunch
 
-/**
- * The DevTrace state machine definition.
- * This machine manages the different states and transitions of the DevTrace AI extension.
- */
+
 /**
  * The DevTrace state machine definition.
  * This machine manages the different states and transitions of the DevTrace AI extension.
@@ -20,7 +20,7 @@ interface DevTraceContext {
   hotswapResults?: Record<string, unknown>;
   currentFile: string | null;
   selectedFunction: string | null;
-  liveEvents: any[];
+  liveEvents: Record<string, unknown>[];
   hotswapHistory: { timestamp: number; details: string }[];
   aiProvider: AIProvider;
   apiKey: string;
@@ -40,7 +40,34 @@ interface DevTraceContext {
   newCode?: string;
 }
 
-type DevTraceEvent =
+export type DevTraceState =
+  | { value: "idle"; context: DevTraceContext }
+  | { value: "insightMode"; context: DevTraceContext }
+  | { value: "insightMode.idle"; context: DevTraceContext }
+  | { value: "insightMode.analyzing"; context: DevTraceContext }
+  | { value: "insightMode.results"; context: DevTraceContext }
+  | { value: "insightMode.error"; context: DevTraceContext }
+  | { value: "insightMode.fetchingSuggestions"; context: DevTraceContext }
+  | { value: "insightMode.suggestionsReceived"; context: DevTraceContext }
+  | { value: "insightMode.applyingSuggestion"; context: DevTraceContext }
+  | { value: "flowMode"; context: DevTraceContext }
+  | { value: "flowMode.idle"; context: DevTraceContext }
+  | { value: "flowMode.processing"; context: DevTraceContext }
+  | { value: "flowMode.completed"; context: DevTraceContext }
+  | { value: "flowMode.error"; context: DevTraceContext }
+  | { value: "liveTraceMode"; context: DevTraceContext }
+  | { value: "liveTraceMode.idle"; context: DevTraceContext }
+  | { value: "liveTraceMode.tracing"; context: DevTraceContext }
+  | { value: "liveTraceMode.completed"; context: DevTraceContext }
+  | { value: "liveTraceMode.error"; context: DevTraceContext }
+  | { value: "hotswapMode"; context: DevTraceContext }
+  | { value: "hotswapMode.idle"; context: DevTraceContext }
+  | { value: "hotswapMode.swapping"; context: DevTraceContext }
+  | { value: "hotswapMode.completed"; context: DevTraceContext }
+  | { value: "hotswapMode.error"; context: DevTraceContext };
+
+// Define the type for the state machine's events
+export type DevTraceEvent =
   | { type: "exit" }
   | { type: "start.insightMode" }
   | { type: "start.flowMode" }
@@ -48,7 +75,7 @@ type DevTraceEvent =
   | { type: "start.hotswapMode" }
   | { type: "analyze" }
   | { type: "fetchSuggestions" }
-  | { type: "applySuggestion" }
+  | { type: "applySuggestion"; suggestion: string }
   | { type: "process"; data: { functionName: string } }
   | { type: "trace" }
   | { type: "swap" }
@@ -63,7 +90,7 @@ type DevTraceEvent =
     liveEvents: any;
     errorMessage: string;
   }
-  | { type: "liveEvents"; event: any }
+  | { type: "liveEvents"; event: Record<string, unknown> }
   | { type: "error"; errorMessage: string }
   | { type: "entry"; entry: any }
   | { type: "exit"; exit: any }
@@ -77,12 +104,6 @@ type DevTraceEvent =
   | { type: "addHotswapHistoryEntry"; entry: any }
   | { type: "clearHotswapHistory" };
 
-type DevTraceTypeState =
-  | { value: "idle"; context: DevTraceContext }
-  | { value: "insightMode"; context: DevTraceContext }
-  | { value: "flowMode"; context: DevTraceContext }
-  | { value: "liveTraceMode"; context: DevTraceContext }
-  | { value: "hotswapMode"; context: DevTraceContext };
 
 export const devTraceMachine = createMachine<
   DevTraceContext,
@@ -100,6 +121,7 @@ export const devTraceMachine = createMachine<
       flowResults: undefined,
       traceResults: undefined,
       hotswapResults: undefined,
+      // Add other context variables as needed, e.g.,
       currentFile: null as string | null, // Currently active file in the editor
       selectedFunction: null, // Currently selected function for flow analysis
       liveEvents: [], // Array to store live events
@@ -490,10 +512,12 @@ export const devTraceMachine = createMachine<
       /**
        * Action to process flow.
        */
-      processFlow: async () => {
+      processFlow: async (context: DevTraceContext) => {
         // Call the RuntimeFacade to process the flow
         const runtimeFacade = new RuntimeFacade();
-        const results = await runtimeFacade.processFlow();
+        const results = await runtimeFacade.generateFlowData(
+          context.selectedFunction ?? "",
+        );
         // ... any other actions needed to process the flow
         return results;
       },
@@ -503,21 +527,46 @@ export const devTraceMachine = createMachine<
       startLiveTrace: async (context: DevTraceContext) => {
         // Call the RuntimeFacade to start live trace
         const runtimeFacade = new RuntimeFacade();
-        if (context.currentFile && context.selectedFunction) {
-          const results = await runtimeFacade.startLiveTrace({
-            subscribe: (_callback) => {
-              // Removed call to non-existent onLiveTraceEvent method
-            },
-            send: (_message) => {
-              // runtimeFacade.sendMessage(message); // Removed as sendMessage does not exist on RuntimeFacade
-            },
-          });
-          return results;
+        // Assuming webviewView is accessible in this context
+        const webviewView = vscode.window.tabGroups.activeTabGroup.activeTab?.webviewView;
+
+  if (context.currentFile && context.selectedFunction && webviewView) {
+    runtimeFacade.startLiveTrace(
+      {
+        subscribe: (callback) => {
+          // Establish a connection to the backend to stream live events
+          const eventSource = new EventSource("http://localhost:3000/live");
+
+          // Listen for incoming events
+          eventSource.onmessage = (event: { type: string; event: Record<string, unknown> }) => {
+            const liveEvent = event.event;
+           // callback({ type: "liveEvents", event: liveEvent });
+           console.log("Live event received:", liveEvent);
+          };
+
+          // Handle errors
+          eventSource.onerror = (error) => {
+            console.error("Error streaming live events:", error);
+            // Optionally, send an error event to the state machine
+            // callback({ type: 'error', errorMessage: 'Error streaming live events' });
+          };
+        },
+        send: () => {
+          // Here, you can handle messages sent from the state machine
+          // and send them to the RuntimeFacade
+          // For example:
+          // if (message.type === 'stopTracing') {
+          //   runtimeFacade.stopTracing();
+          // }
+        },
+      },
+      webviewView,
+          );
         } else {
-          throw new Error("currentFile or selectedFunction is null");
+          throw new Error(
+            "currentFile or selectedFunction or webviewView is null",
+          );
         }
-        // ... any other actions needed to start live trace
-        return results;
       },
       /**
        * Action to perform hotswap.
@@ -599,10 +648,12 @@ export const devTraceMachine = createMachine<
         },
         id: "analyzeCodeActor", // Give the actor an ID
       }),
-      processFlow: () => ({
+      processFlow: (context: DevTraceContext) => ({
         src: async () => {
           const runtimeFacade = new RuntimeFacade();
-          const results = await runtimeFacade.processFlow();
+          const results = await runtimeFacade.generateFlowData(
+            context.selectedFunction ?? "",
+          );
           return results;
         },
         id: "processFlowActor",
@@ -665,12 +716,12 @@ export const devTraceMachine = createMachine<
  * The DevTrace state machine actor.
  * This actor is used to interpret the state machine and manage its execution.
  */
-export const devTraceActor = createActor(devTraceMachine, {
+let devTraceActor = createActor(devTraceMachine, {
   id: "devTraceActor", // Assign an ID to the actor
-
-  // ... other configuration options for the actor, e.g.,
-  logger: (event) => console.log("Event:", event), // Custom logger
+  logger: (event: DevTraceEvent) => console.log("Event:", event),
 });
+
+
 
 // You can now start the actor using devTraceActor.start()
 // and interact with it using devTraceActor.send()
