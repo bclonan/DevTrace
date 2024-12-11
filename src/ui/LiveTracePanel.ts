@@ -53,10 +53,10 @@ export class LiveTracePanel implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage((message) => {
       switch (message.type) {
         case 'startTracing':
-          this.devTraceActor.send('trace');
+          this.devTraceActor.send({ type: 'trace' });
           break;
         case 'stopTracing':
-          this.devTraceActor.send('exit');
+          this.devTraceActor.send({ type: 'exit' });
           break;
         // ... handle other messages from the webview
       }

@@ -134,8 +134,9 @@ export const devTraceMachine = createMachine(
                 /**
                  * Assign the analysis results to the `analysisResults` context variable.
                  */
-                actions: assign({
-                  analysisResults: (_, event) => event.data,
+                actions: assign<{ analysisResults: any }>({
+                  analysisResults: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
               /**
@@ -147,7 +148,8 @@ export const devTraceMachine = createMachine(
                  * Assign the error message to the `errorMessage` context variable.
                  */
                 actions: assign({
-                  errorMessage: (_, event) => event.data,
+                  errorMessage: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
             },
@@ -181,13 +183,15 @@ export const devTraceMachine = createMachine(
               onDone: {
                 target: "suggestionsReceived",
                 actions: assign({
-                  suggestions: (_, event) => event.data,
+                  suggestions: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event) => event.data,
+                  errorMessage: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
             },
@@ -219,7 +223,8 @@ export const devTraceMachine = createMachine(
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event) => event.data,
+                  errorMessage: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
             },
@@ -245,13 +250,15 @@ export const devTraceMachine = createMachine(
               onDone: {
                 target: "completed",
                 actions: assign({
-                  flowResults: (_, event) => event.data,
+                  flowResults: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event) => event.data,
+                  errorMessage: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
             },
@@ -287,13 +294,15 @@ export const devTraceMachine = createMachine(
               onDone: {
                 target: "completed",
                 actions: assign({
-                  traceResults: (_, event) => event.data,
+                  traceResults: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event) => event.data,
+                  errorMessage: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
             },
@@ -333,13 +342,15 @@ export const devTraceMachine = createMachine(
               onDone: {
                 target: "completed",
                 actions: assign({
-                  hotswapResults: (_, event) => event.data,
+                  hotswapResults: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
               onError: {
                 target: "error",
                 actions: assign({
-                  errorMessage: (_, event) => event.data,
+                  errorMessage: (_, event: { data: any }) =>
+                    event ? event.data : undefined,
                 }),
               },
             },

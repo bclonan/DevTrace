@@ -1,7 +1,7 @@
-import { OpenAIClient } from './OpenAIClient';
-import { AnthropicClient } from './AnthropicClient';
-import { GoogleAIClient } from './GoogleAIClient';
-import { GithubCopilotClient } from './GithubCopilotClient';
+import { OpenAIClient } from './OpenAIClient.ts';
+import { AnthropicClient } from './AnthropicClient.ts';
+import { GoogleAIClient } from './GoogleAIClient.ts';
+import { GithubCopilotClient } from './GithubCopilotClient.ts';
 
 export enum AIProvider {
   OpenAI = 'openai',

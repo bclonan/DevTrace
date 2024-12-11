@@ -1,71 +1,78 @@
-# devtrace README
+## DevTrace AI - VS Code Extension
 
-This is the README for your extension "devtrace". After writing up a brief description, we recommend including the following sections.
+**Level up your debugging with AI-powered insights and live code manipulation!**
 
-## Features
+DevTrace AI is a powerful VS Code extension that reimagines debugging with features like:
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+* **Insight Mode:**  Automatically analyzes your code for potential issues and suggests fixes.
+* **Flow Mode:** Visualizes the execution flow of your functions, helping you understand how data moves through your application.
+* **Live Trace Mode:**  Streams real-time diagnostics, showing you errors and events as they happen.
+* **Hotswap Mode:**  Lets you rollback to previous states, apply AI-powered or manual fixes, and continue execution without restarting.
 
-For example if there is an image subfolder under your extension project workspace:
+### Getting Started
 
-\!\[feature X\]\(images/feature-x.png\)
+**1. Installation**
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* Clone this repository to your local machine.
+* Open the project folder in VS Code.
+* Run `npm install` to install the dependencies.
 
-## Requirements
+**2. Configuration**
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+* **Backend:**
+    *   Start the backend server by running `npm run start`. This will start the Express.js server on `http://localhost:3000`.
+* **Extension:**
+    *   Open the `src/stateMachine.ts` file and configure the `aiProvider` and `apiKey` in the machine's context based on your preferred AI provider (OpenAI, Anthropic, or Google AI).
+    *   (Optional) If you want to use GitHub Copilot for suggestions, ensure that the GitHub Copilot extension is installed and enabled in VS Code.
 
-## Extension Settings
+**3. Running the Extension**
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+* Press `F5` to start the extension in debug mode. This will open a new VS Code window with the extension loaded.
+* Open a Node.js project in the new window.
+* Use the commands in the Command Palette (`Ctrl+Shift+P`) to interact with the extension:
+    *   `DevTrace: Start Insight Mode`
+    *   `DevTrace: Start Flow Mode`
+    *   `DevTrace: Start Live Trace Mode`
+    *   `DevTrace: Start Hotswap Mode`
+    *   `DevTrace: Analyze`
+    *   `DevTrace: Generate Flow`
+    *   `DevTrace: Stream Live Events`
+    *   `DevTrace: Rollback`
+    *   `DevTrace: Apply Fix`
+    *   `DevTrace: Play Forward`
+    *   `DevTrace: Exit`
 
-For example:
+**4. Publishing the Extension**
 
-This extension contributes the following settings:
+*   Create a publisher account on the VS Code Marketplace.
+*   Install the `vsce` (Visual Studio Code Extensions) CLI: `npm install -g vsce`.
+*   Update the `package.json` file with your extension details (publisher name, description, etc.).
+*   Package the extension: `vsce package`.
+*   Publish the extension: `vsce publish`.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### Features in Detail
 
-## Known Issues
+* **Insight Mode:**
+    *   Automatically analyzes your code for potential issues using static analysis and runtime data.
+    *   Provides clear descriptions of the issues and their severity.
+    *   Offers AI-powered code suggestions to fix the issues.
+* **Flow Mode:**
+    *   Visualizes the execution flow of your functions using a graph.
+    *   Shows how data moves through your application, making it easier to understand complex logic.
+    *   Highlights performance bottlenecks and potential areas for optimization.
+* **Live Trace Mode:**
+    *   Streams real-time diagnostics, showing you errors, logs, and other events as they happen.
+    *   Helps you identify and debug issues quickly in dynamic environments.
+    *   Provides insights into the behavior of your application under different conditions.
+* **Hotswap Mode:**
+    *   Lets you rollback to previous states of your application, allowing you to "rewind" execution.
+    *   Enables you to apply AI-powered or manual fixes to your code without restarting the application.
+    *   Helps you experiment with different solutions and see their impact immediately.
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+### Contributing
 
-## Release Notes
+Contributions are welcome! Feel free to open issues or submit pull requests to improve the extension.
 
-Users appreciate release notes as you update your extension.
+### License
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+This project is licensed under the MIT License.
