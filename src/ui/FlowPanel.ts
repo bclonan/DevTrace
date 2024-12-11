@@ -10,20 +10,20 @@ import { devTraceMachine } from "../stateMachine.ts";
  * Manages the webview for the Flow panel.
  */
 export class FlowPanel implements vscode.WebviewViewProvider {
-    private devTraceService: Actor<typeof devTraceMachine>;
+    private devTraceActor: Actor<typeof devTraceMachine>;
 
     /**
      * Creates a new instance of the FlowPanel class.
      * @param _extensionUri The URI of the extension.
      * @param runtimeFacade The runtime facade.
-     * @param devTraceService The DevTrace state machine service.
+     * @param devTraceActor The DevTrace state machine actor.
      */
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly runtimeFacade: RuntimeFacade,
-        devTraceService: Actor<typeof devTraceMachine>,
+        devTraceActor: Actor<typeof devTraceMachine>,
     ) {
-        this.devTraceService = devTraceService;
+        this.devTraceActor = devTraceActor;
     }
 
     /**
@@ -39,14 +39,30 @@ export class FlowPanel implements vscode.WebviewViewProvider {
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
         // Listen for state changes
-        this.devTraceService.subscribe((state) => {
+        this.devTraceActor.subscribe((state) => {
             // Send the current state to the webview
             webviewView.webview.postMessage({
                 type: "stateChanged",
                 state: state.value,
-                flowData: state.context.flowData,
+                flowResults: state.context.flowResults,
                 errorMessage: state.context.errorMessage,
             });
+        });
+
+        // Handle messages from the webview
+        webviewView.webview.onDidReceiveMessage((message) => {
+            switch (message.type) {
+                case "generateFlow":
+                    this.devTraceActor.send({
+                        type: "process",
+                        functionName: message.functionName,
+                    });
+                    break;
+                case "exit":
+                    this.devTraceActor.send({ type: "exit" });
+                    break;
+                    // ... handle other messages from the webview
+            }
         });
     }
 
@@ -59,7 +75,9 @@ export class FlowPanel implements vscode.WebviewViewProvider {
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this._extensionUri, "media", "flowPanel.js"),
         );
-
+        const styleUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this._extensionUri, "media", "styles.css"),
+        );
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
 
@@ -70,17 +88,18 @@ export class FlowPanel implements vscode.WebviewViewProvider {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>DevTrace - Flow</title>
+        <link href="${styleUri}" rel="stylesheet" type="text/css">
         <style>
-          /* ... CSS styles */
+          /* Add any additional CSS styles here */
         </style>
       </head>
       <body>
         <div id="root">
-          <div id="loader" style="display: none;">Generating flow data...</div>
-          <div id="flow" style="display: none;">
-            </div>
-          <div id="error" style="display: none;">
-            </div>
+          <div id="loader" class="loader">Generating flow data...</div>
+          <div id="flow" class="flow-container">
+          </div>
+          <div id="error" class="error-message" style="display: none;">
+          </div>
         </div>
         <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
