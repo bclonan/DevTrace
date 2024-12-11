@@ -4,6 +4,7 @@ import { assign, createActor, createMachine } from "xstate";
 import { AIProvider } from "./ai/AIModelFactory.ts"; // Import AIProvider from the correct module
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
 
+
 /**
  * The DevTrace state machine definition.
  * This machine manages the different states and transitions of the DevTrace AI extension.
