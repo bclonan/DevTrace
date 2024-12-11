@@ -56,7 +56,7 @@ export class InsightPanel implements vscode.WebviewViewProvider {
           this.devTraceActor.send({ type: "analyze" });
           break;
         case "fetchSuggestions":
-          this.devTraceActor.send({ type: "fetchSuggestions" });
+          this.devTraceActor.send({ type: "fetchSuggestions", errorMessage: "" });
           break;
         case "applySuggestion":
           this.devTraceActor.send({
@@ -67,7 +67,7 @@ export class InsightPanel implements vscode.WebviewViewProvider {
         case "exit":
           this.devTraceActor.send({ type: "exit" });
           break;
-          // ... handle other messages from the webview
+        // ... handle other messages from the webview
       }
     });
   }

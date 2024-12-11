@@ -55,9 +55,7 @@ export class FlowPanel implements vscode.WebviewViewProvider {
                 case "generateFlow":
                     this.devTraceActor.send({
                         type: "process",
-                        data: {
-                            functionName: message.functionName,
-                        },
+                        functionName: message.functionName,
                     });
                     break;
                 case "exit":

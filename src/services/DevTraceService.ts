@@ -1,6 +1,7 @@
 // src/services/DevTraceService.ts
 
 import { devTraceActor } from "../stateMachine.ts";
+import { AISuggestion } from "../types.ts";
 
 /**
  * The DevTraceService class.
@@ -33,7 +34,7 @@ export class DevTraceService {
      * @param functionName The name of the function to process.
      */
     static processFlow(functionName: string) {
-        devTraceActor.send({ type: "process", data: { functionName } });
+        devTraceActor.send({ type: "process", functionName });
     }
 
     /**
@@ -54,14 +55,14 @@ export class DevTraceService {
      * Sends a 'fetchSuggestions' event to the DevTrace actor.
      */
     static fetchSuggestions() {
-        devTraceActor.send({ type: "fetchSuggestions" });
+        devTraceActor.send({ type: "fetchSuggestions", errorMessage: "" });
     }
 
     /**
      * Sends an 'applySuggestion' event to the DevTrace actor.
      * @param suggestion The suggestion to apply.
      */
-    static applySuggestion(suggestion: string) {
+    static applySuggestion(suggestion: AISuggestion) {
         devTraceActor.send({ type: "applySuggestion", suggestion });
     }
 
@@ -93,9 +94,20 @@ export class DevTraceService {
      * @param event The live event to add.
      */
     static addLiveEvent(
-        event: { type: string; payload: Record<string, unknown> },
+        event: { type: string; payload: Record<string, unknown>; eventId?: string; message?: string; filePath?: string; lineNumber?: number; timestamp?: number },
     ) {
-        devTraceActor.send({ type: "addLiveEvent", event });
+        devTraceActor.send({
+            type: "addLiveEvent",
+            event: {
+                ...event,
+                eventId: event.eventId || "",
+                message: event.message || "",
+                filePath: event.filePath || "",
+                lineNumber: event.lineNumber || 0,
+                timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
+                type: event.type as "error" | "warning" | "info" | "log" | "performance"
+            }
+        });
     }
 
     /**

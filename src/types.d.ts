@@ -1,324 +1,106 @@
-// types.d.ts
 import { AIProvider } from "./ai/AIModelFactory";
+
+
+/**
+ * All services and actions available in the DevTrace system.
+ * These are the functions that can be called by the DevTrace actor.
+ */
+export type DevTraceServices = {
+    analyzeCode: {
+        src: "analyzeCode";
+        logic: never;
+        input: string;
+        output: AnalyzeResponse;
+    };
+    fetchSuggestions: {
+        src: "fetchSuggestions";
+        logic: never;
+        input: FetchSuggestionsRequest;
+        output: FetchSuggestionsResponse;
+    };
+    applySuggestion: {
+        src: "applySuggestion";
+        logic: never;
+        input: { currentFile: string; suggestion: AISuggestion };
+        output: boolean;
+    };
+    performHotswap: {
+        src: "performHotswap";
+        logic: never;
+        input: string;
+        output: PerformHotswapResponse;
+    };
+    startLiveTrace: {
+        src: "startLiveTrace";
+        logic: never;
+        input: DevTraceContext;
+        output: StartLiveTraceResponse;
+    };
+};
+
+export interface DevTraceServices {
+    analyzeCode: {
+        src: "analyzeCode";
+        logic: never;
+        input: string;
+        output: AnalyzeResponse;
+    };
+    fetchSuggestions: {
+        src: "fetch";
+        Suggestions: never;
+        logic: never;
+        input: FetchSuggestionsRequest;
+        output: FetchSuggestionsResponse;
+    };
+    applySuggestion: {
+        src: "applySuggestion";
+        logic: never;
+        input: { currentFile: string; suggestion: AISuggestion };
+        output: boolean;
+    };
+    performHotswap: {
+        src: "performHotswap";
+        logic: never;
+        input: string;
+        output: PerformHotswapResponse;
+    };
+    startLiveTrace: {
+        src: "startLiveTrace";
+        logic: never;
+        input: DevTraceContext;
+        output: StartLiveTraceResponse;
+    };
+}
+
+
+
 
 /**
  * Request interface for fetching AI suggestions
  */
 export interface FetchSuggestionsRequest {
-    /** Error message to generate suggestions for */
     errorMessage: string;
-
-    /** Current file path */
     filePath: string;
-
-    /** Context lines around error */
     contextLines?: number;
-
-    /** AI provider configuration */
     provider: {
         type: AIProvider;
         apiKey: string;
         model?: string;
         temperature?: number;
     };
-
-    /** Maximum suggestions to return */
     maxSuggestions?: number;
 }
 
 /**
- * Response from fetching AI suggestions
+ * AI suggestion structure
  */
-export interface FetchSuggestionsResponse {
-    /** Array of generated suggestions */
-    suggestions: AISuggestion[];
-
-    /** Processing time in ms */
-    processingTimeMs: number;
-
-    /** Usage metrics from AI provider */
-    usage?: {
-        promptTokens: number;
-        completionTokens: number;
-        totalTokens: number;
-    };
-}
-
-/**
- * Request for analyzing code
- */
-export interface AnalyzeRequest {
-    /** Code to analyze */
-    code: string;
-
-    /** File path */
-    filePath: string;
-
-    /** Analysis configuration */
-    config?: {
-        /** Analysis depth level */
-        depth: "basic" | "intermediate" | "deep";
-
-        /** Specific rules to check */
-        rules?: string[];
-
-        /** Maximum issues to report */
-        maxIssues?: number;
-    };
-}
-
-/**
- * Analysis response
- */
-export interface AnalyzeResponse {
-    /** Found issues */
-    issues: Issue[];
-
-    /** Analysis stats */
-    stats: {
-        /** Lines of code analyzed */
-        linesOfCode: number;
-
-        /** Analysis time in ms */
-        analysisTimeMs: number;
-
-        /** Issues by severity */
-        issuesBySeverity: Record<Issue["severity"], number>;
-    };
-}
-
-/**
- * Request for processing code flow
- */
-export interface ProcessFlowRequest {
-    /** Target function name */
-    functionName: string;
-
-    /** Entry point file */
-    entryPoint: string;
-
-    /** Flow analysis options */
-    options?: {
-        /** Max depth to traverse */
-        maxDepth?: number;
-
-        /** Include async operations */
-        includeAsync?: boolean;
-
-        /** Include library calls */
-        includeLibs?: boolean;
-    };
-}
-
-export type Issue = {
-    id: number;
-    severity: "critical" | "warning" | "info";
-    message: string;
-    filePath: string;
-    lineNumber: number;
-    codeSnippet?: string;
-    fixes?: AISuggestion[];
-};
-
-export type FlowNode = {
-    nodeId: string;
-    functionName: string;
-    args: unknown[];
-    returnValue: unknown;
-    timeMs: number;
-    parentNodeId: string | null;
-    associatedLogs: string[];
-};
-
-/**
- * Flow analysis response
- */
-export interface ProcessFlowResponse {
-    /** Flow graph nodes */
-    nodes: FlowNode[];
-
-    /** Flow metadata */
-    metadata: {
-        /** Total execution time */
-        totalTimeMs: number;
-
-        /** Number of function calls */
-        functionCalls: number;
-
-        /** Max call stack depth */
-        maxDepth: number;
-    };
-}
-
-/**
- * Request to start live tracing
- */
-export interface StartLiveTraceRequest {
-    /** Files to trace */
-    files: string[];
-
-    /** Trace configuration */
-    config: {
-        /** Event types to capture */
-        captureEvents: Array<"log" | "error" | "perf" | "network" | "db">;
-
-        /** Sampling rate (0-1) */
-        samplingRate?: number;
-
-        /** Buffer size for events */
-        bufferSize?: number;
-    };
-}
-
-/**
- * Live trace response
- */
-export interface StartLiveTraceResponse {
-    /** Trace session ID */
-    sessionId: string;
-
-    /** Initial trace data */
-    initialData: {
-        /** Connected files */
-        files: string[];
-
-        /** Active trace points */
-        tracePoints: Array<{
-            id: string;
-            location: string;
-            type: string;
-        }>;
-    };
-}
-
-/**
- * Request for hot code swap
- */
-export interface PerformHotswapRequest {
-    /** Operation type */
-    operation: "hotswap" | "rollback" | "commit";
-
-    /** State identifier */
-    stateId: string;
-
-    /** New code (for hotswap) */
-    newCode?: string;
-
-    /** Validation options */
-    validate?: {
-        /** Run tests before swap */
-        runTests?: boolean;
-
-        /** Check syntax only */
-        syntaxOnly?: boolean;
-    };
-}
-
-/**
- * Hot swap response
- */
-export interface PerformHotswapResponse {
-    /** Operation success */
-    success: boolean;
-
-    /** Operation message */
-    message: string;
-
-    /** New state after swap */
-    newState?: {
-        id: string;
-        timestamp: number;
-        changes: Array<{
-            file: string;
-            type: "modify" | "add" | "delete";
-        }>;
-    };
-}
-
-/**
- * Live event from tracing
- */
-export interface LiveEvent {
-    /** Event identifier */
-    eventId: string;
-
-    /** Event type */
-    type: "error" | "warning" | "info" | "log" | "performance";
-
-    /** Event message */
-    message: string;
-
-    /** Source file */
-    filePath: string;
-
-    /** Line number */
-    lineNumber: number;
-
-    /** Timestamp */
-    timestamp: Date;
-
-    /** Performance data */
-    performance?: {
-        /** Operation duration */
-        durationMs: number;
-
-        /** CPU usage */
-        cpuUsage?: number;
-
-        /** Memory usage */
-        memoryUsage?: number;
-    };
-
-    /** Network data */
-    network?: {
-        /** Request URL */
-        url: string;
-
-        /** HTTP method */
-        method: string;
-
-        /** Response code */
-        statusCode: number;
-
-        /** Response time */
-        responseTimeMs: number;
-    };
-
-    /** Fix suggestion */
-    suggestedFix?: {
-        /** Fix description */
-        description: string;
-
-        /** Fix implementation */
-        codeSnippet: string;
-
-        /** Fix confidence */
-        confidence: number;
-    };
-
-    /** Extension point for custom data */
-    [key: string]: unknown;
-}
-export type AISuggestion = {
-    /** Suggestion ID */
+export interface AISuggestion {
     id: string;
-
-    /** Human-readable description */
     description: string;
-
-    /** Implementation code */
     codeSnippet?: string;
-
-    /** Confidence score (0-1) */
     confidence?: number;
-
-    /** Suggestion category */
     type: "refactor" | "fix" | "optimization";
-
-    /** Expected impact */
     impact: "high" | "medium" | "low";
-
-    /** Code difference */
     diff?: {
         before: string;
         after: string;
@@ -330,113 +112,212 @@ export type AISuggestion = {
             content: string;
         }>;
     };
-
-    /** Implementation metadata */
     metadata?: {
-        /** Required imports */
         imports?: string[];
-
-        /** Affected functions */
         affectedFunctions?: string[];
-
-        /** Breaking changes */
         breakingChanges?: boolean;
     };
+}
 
-};
+/**
+ * Response from fetching AI suggestions
+ */
+export interface FetchSuggestionsResponse {
+    suggestions: AISuggestion[];
+    processingTimeMs: number;
+    usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+    };
+}
 
-export type FetchSuggestionsRequest = {
-    errorMessage: string;
+/**
+ * Issues found during analysis
+ */
+export interface Issue {
+    id: number;
+    severity: "critical" | "warning" | "info";
+    message: string;
     filePath: string;
-    contextLines?: number;
-    provider: {
-        type: AIProvider;
-        apiKey: string;
-        model?: string;
-        temperature?: number;
+    lineNumber: number;
+    codeSnippet?: string;
+    fixes?: AISuggestion[];
+}
+
+/**
+ * Analysis response
+ */
+export interface AnalyzeResponse {
+    issues: Issue[];
+    stats: {
+        linesOfCode: number;
+        analysisTimeMs: number;
+        issuesBySeverity: Record<Issue["severity"], number>;
     };
-    maxSuggestions?: number;
+}
+
+/**
+ * Flow node structure for process flow analysis
+ */
+export interface FlowNode {
+    nodeId: string;
+    functionName: string;
+    args: unknown[];
+    returnValue: unknown;
+    timeMs: number;
+    parentNodeId: string | null;
+    associatedLogs: string[];
+}
+
+/**
+ * Flow analysis response
+ */
+export interface ProcessFlowResponse {
+    nodes: FlowNode[];
+    metadata: {
+        totalTimeMs: number;
+        functionCalls: number;
+        maxDepth: number;
+    };
+}
+
+/**
+ * Start live trace response
+ */
+export interface StartLiveTraceResponse {
+    sessionId: string;
+    initialData: {
+        files: string[];
+        tracePoints: Array<{
+            id: string;
+            location: string;
+            type: string;
+        }>;
+    };
+}
+
+/**
+ * Hot swap response
+ */
+export interface PerformHotswapResponse {
+    success: boolean;
+    message: string;
+    newState?: {
+        id: string;
+        timestamp: number;
+        changes: Array<{
+            file: string;
+            type: "modify" | "add" | "delete";
+        }>;
+    };
+}
+
+/**
+ * Live event structure
+ */
+export interface LiveEvent {
+    eventId: string;
+    type: "error" | "warning" | "info" | "log" | "performance";
+    message: string;
+    filePath: string;
+    lineNumber: number;
+    timestamp: Date;
+    performance?: {
+        durationMs: number;
+        cpuUsage?: number;
+        memoryUsage?: number;
+    };
+    network?: {
+        url: string;
+        method: string;
+        statusCode: number;
+        responseTimeMs: number;
+    };
+    suggestedFix?: {
+        description: string;
+        codeSnippet: string;
+        confidence: number;
+    };
+}
+
+export interface DevTraceContext {
+    analysisResults?: AnalyzeResponse;
+    errorMessage?: string;
+    flowResults?: ProcessFlowResponse;
+    traceResults?: StartLiveTraceResponse;
+    hotswapResults?: PerformHotswapResponse;
+    currentFile: string | null;
+    selectedFunction: string | null;
+    liveEvents: LiveEvent[];
+    hotswapHistory: Array<{ timestamp: number; details: string }>;
+    aiProvider: AIProvider;
+    apiKey: string;
+    suggestions?: Record<string, AISuggestion>;
+    stateId?: string;
+    newCode?: string;
+}
+
+export type DevTraceEvent =
+    | { type: "exit" }
+    | { type: "start.insightMode" }
+    | { type: "start.flowMode" }
+    | { type: "start.liveTraceMode" }
+    | { type: "start.hotswapMode" }
+    | { type: "generateFlow"; functionName: string }
+    | { type: "streamLiveEvents" }
+    | { type: "rollback"; stateId: string }
+    | { type: "applyFix"; stateId: string; newCode: string }
+    | { type: "playForward"; stateId: string }
+    | { type: "analyze" }
+    | { type: "fetchSuggestions"; errorMessage: string }
+    | { type: "applySuggestion"; suggestion: AISuggestion }
+    | { type: "process"; functionName: string }
+    | { type: "trace" }
+    | { type: "swap" }
+    | { type: "updateCurrentFile"; file: string }
+    | { type: "updateSelectedFunction"; functionName: string }
+    | { type: "addLiveEvent"; event: LiveEvent }
+    | { type: "clearLiveEvents" }
+    | { type: "addHotswapHistoryEntry"; entry: { timestamp: number; details: string } }
+    | { type: "clearHotswapHistory" }
+    | { type: "addSuggestion"; suggestion: AISuggestion }
+    | { type: "clearSuggestions" }
+    | { type: "setAIProvider"; provider: AIProvider }
+    | { type: "setAPIKey"; apiKey: string }
+    | { type: "setNewCode"; newCode: string }
+    | { type: "setSelectedFunction"; functionName: string }
+    | { type: "NEW_DATA"; data: LiveEvent };
+
+export type analyzeCode = (code: string) => Promise<AnalyzeResponse>;
+
+export type fetchSuggestions = (request: FetchSuggestionsRequest) => Promise<FetchSuggestionsResponse>;
+
+export type applyCodeSuggestion = (currentFile: string, suggestion: AISuggestion) => Promise<boolean>;
+
+export type performHotswap = (stateId: string) => Promise<PerformHotswapResponse>;
+
+export type startLiveTrace = (context: DevTraceContext) => Promise<StartLiveTraceResponse>;
+
+export interface analyzeCode {
+    (code: string): Promise<AnalyzeResponse>;
+}
+
+export type DevTraceState = {
+    context: DevTraceContext;
+    mode: "insight" | "flow" | "liveTrace" | "hotswap";
+    stateId: string;
 };
 
-export interface AnalyzeCodeActor {
-    input: undefined;
-    output: AnalyzeResponse;
-}
+/**
+ * DevTraceActor is optional; define it only if you need this type elsewhere.
+ * If it's causing type conflicts, remove or adjust it.
+ */
+export type DevTraceActor = {
+    send: (event: DevTraceEvent) => void;
+    onMessage: (callback: (event: DevTraceEvent) => void) => void;
+    onExit: (callback: () => void) => void;
+    onError: (callback: (error: Error) => void) => void;
+    terminate: () => void;
 
-export interface ProcessFlowActor {
-    input: undefined;
-    output: ProcessFlowResponse;
-}
-
-export interface StartLiveTraceActor {
-    input: undefined;
-    output: StartLiveTraceResponse;
-}
-
-export interface PerformHotswapActor {
-    input: undefined;
-    output: PerformHotswapResponse;
-}
-
-export interface FetchSuggestionsActor {
-    input: FetchSuggestionsRequest;
-    output: FetchSuggestionsResponse;
-}
-
-export interface ApplySuggestionActor {
-    input: { suggestion: AISuggestion };
-    output: boolean;
-}
-
-export type ActorTypes = {
-    analyzeCode: AnalyzeCodeActor;
-    processFlow: ProcessFlowActor;
-    startLiveTrace: StartLiveTraceActor;
-    performHotswap: PerformHotswapActor;
-    fetchSuggestions: FetchSuggestionsActor;
-    applySuggestion: ApplySuggestionActor;
-}
-
-export interface ActorLogic {
-    analyzeCode: {
-        src: typeof analyzeCodeLogic;
-        logic: ProvidedActor['logic'];
-    };
-    processFlow: {
-        src: typeof processFlowLogic;
-        logic: ProvidedActor['logic'];
-    };
-    startLiveTrace: {
-        src: typeof startLiveTraceLogic;
-        logic: ProvidedActor['logic'];
-    };
-    performHotswap: {
-        src: typeof performHotswapLogic;
-        logic: ProvidedActor['logic'];
-    };
-    fetchSuggestions: {
-        src: typeof fetchSuggestionsLogic;
-        logic: ProvidedActor['logic'];
-    };
-    applySuggestion: {
-        src: typeof applySuggestionLogic;
-        logic: ProvidedActor['logic'];
-    };
-}
-
-export type MachineActors = {
-    analyzeCode: { data: AnalyzeResponse };
-    processFlow: { data: ProcessFlowResponse };
-    startLiveTrace: { data: StartLiveTraceResponse };
-    performHotswap: { data: PerformHotswapResponse };
-    fetchSuggestions: { data: FetchSuggestionsResponse };
-    applySuggestion: { data: boolean };
 };
-
-
-// Additional exports
-export * from './events';
-export * from './runtime';
-export * from './services';
-export * from './stateMachine';
-
