@@ -1,19 +1,35 @@
+// src/ui/InsightPanel.ts
+
 import * as vscode from "vscode";
-import { InterpreterFrom } from "xstate";
-import { RuntimeFacade } from "../services/RuntimeFacade";
-import { devTraceMachine } from "../stateMachine";
+import { Actor } from "xstate";
+import { RuntimeFacade } from "../services/RuntimeFacade.ts";
+import { devTraceMachine } from "../stateMachine.ts";
 
+/**
+ * The Insight Panel UI class.
+ * Manages the webview for the Insight panel.
+ */
 export class InsightPanel implements vscode.WebviewViewProvider {
-  private devTraceService: InterpreterFrom<typeof devTraceMachine>;
+  private devTraceService: Actor<typeof devTraceMachine>;
 
+  /**
+   * Creates a new instance of the InsightPanel class.
+   * @param _extensionUri The URI of the extension.
+   * @param runtimeFacade The runtime facade.
+   * @param devTraceService The DevTrace state machine service.
+   */
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly runtimeFacade: RuntimeFacade,
-    devTraceService: InterpreterFrom<typeof devTraceMachine>,
+    devTraceService: Actor<typeof devTraceMachine>,
   ) {
     this.devTraceService = devTraceService;
   }
 
+  /**
+   * Resolves the webview view for the Insight panel.
+   * @param webviewView The webview view.
+   */
   resolveWebviewView(webviewView: vscode.WebviewView) {
     webviewView.webview.options = {
       enableScripts: true,
@@ -28,10 +44,17 @@ export class InsightPanel implements vscode.WebviewViewProvider {
       webviewView.webview.postMessage({
         type: "stateChanged",
         state: state.value,
+        results: state.context.analysisResults,
+        errorMessage: state.context.errorMessage,
       });
     });
   }
 
+  /**
+   * Generates the HTML content for the webview.
+   * @param webview The webview.
+   * @returns The HTML content.
+   */
   private _getHtmlForWebview(webview: vscode.Webview) {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._extensionUri, "media", "insightPanel.js"),
@@ -40,9 +63,8 @@ export class InsightPanel implements vscode.WebviewViewProvider {
     // Use a nonce to whitelist which scripts can be run
     const nonce = getNonce();
 
-    // ... HTML content with JavaScript to handle state changes and display data
     return `
-       <!DOCTYPE html>
+      <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
@@ -67,6 +89,10 @@ export class InsightPanel implements vscode.WebviewViewProvider {
   }
 }
 
+/**
+ * Generates a nonce value for security.
+ * @returns The nonce value.
+ */
 function getNonce() {
   let text = "";
   const possible =

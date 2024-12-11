@@ -1,11 +1,17 @@
-import * as vscode from 'vscode';
-import { RuntimeFacade } from './services/RuntimeFacade';
-import { InsightPanel } from './ui/InsightPanel';
-import { FlowPanel } from './ui/FlowPanel';
-import { LiveTracePanel } from './ui/LiveTracePanel';
-import { HotswapPanel } from './ui/HotswapPanel';
-import { devTraceMachine, devTraceService } from './stateMachine';
+// src/extension.ts
 
+import * as vscode from 'vscode';
+import { RuntimeFacade } from './services/RuntimeFacade.ts'; // Import from .ts file
+import { InsightPanel } from './ui/InsightPanel.ts'; // Import from .ts file
+import { FlowPanel } from './ui/FlowPanel.ts'; // Import from .ts file
+import { LiveTracePanel } from './ui/LiveTracePanel.ts'; // Import from .ts file
+import { HotswapPanel } from './ui/HotswapPanel.ts'; // Import from .ts file
+import { devTraceMachine, devTraceService } from './stateMachine.ts'; // Import from .ts file
+
+/**
+ * Activates the DevTrace AI extension.
+ * @param context The extension context.
+ */
 export function activate(context: vscode.ExtensionContext) {
   // Create runtime facade
   const runtimeFacade = new RuntimeFacade();
@@ -27,7 +33,24 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('devtrace.analyze', () => {
       devTraceService.send('analyze');
     }),
-    // ... other commands for exit, generateFlow, streamLiveEvents, rollback, applyFix, playForward
+    vscode.commands.registerCommand('devtrace.generateFlow', (functionName: string) => {
+      devTraceService.send({ type: 'generateFlow', functionName });
+    }),
+    vscode.commands.registerCommand('devtrace.streamLiveEvents', () => {
+      devTraceService.send('streamLiveEvents');
+    }),
+    vscode.commands.registerCommand('devtrace.rollback', (stateId: string) => {
+      devTraceService.send({ type: 'rollback', stateId });
+    }),
+    vscode.commands.registerCommand('devtrace.applyFix', (stateId: string, newCode: string) => {
+      devTraceService.send({ type: 'applyFix', stateId, newCode });
+    }),
+    vscode.commands.registerCommand('devtrace.playForward', (stateId: string) => {
+      devTraceService.send({ type: 'playForward', stateId });
+    }),
+    vscode.commands.registerCommand('devtrace.exit', () => {
+      devTraceService.send('exit');
+    }),
   );
 
   // Create UI panels
@@ -45,4 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
+/**
+ * Deactivates the DevTrace AI extension.
+ */
 export function deactivate() {}
