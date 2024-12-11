@@ -3,22 +3,10 @@
 import { assign, createActor, createMachine } from "xstate";
 import { AIProvider } from "./ai/AIModelFactory.ts";
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
-
-export interface LiveEvent {
-  eventId: string;
-  type: string;
-  message: string;
-  filePath: string;
-  lineNumber: number;
-  timestamp: Date;
-  suggestedFix?: {
-    description: string;
-    codeSnippet: string;
-  };
-}
+import type { AISuggestion, LiveEvent } from "./types.d.ts";
 
 
-export interface DevTraceContext {
+interface DevTraceContext {
   analysisResults?: Record<string, unknown>;
   errorMessage?: string;
   flowResults?: Record<string, unknown>;
@@ -52,7 +40,7 @@ export interface DevTraceContext {
 }
 
 
-export type DevTraceState =
+type DevTraceState =
   | { value: "idle"; context: DevTraceContext }
   | { value: "insightMode"; context: DevTraceContext }
   | { value: "insightMode.idle"; context: DevTraceContext }
@@ -78,7 +66,7 @@ export type DevTraceState =
   | { value: "hotswapMode.completed"; context: DevTraceContext }
   | { value: "hotswapMode.error"; context: DevTraceContext };
 
-export type DevTraceEvent =
+type DevTraceEvent =
   | { type: "exit" }
   | { type: "start.insightMode" }
   | { type: "start.flowMode" }
@@ -107,7 +95,7 @@ export type DevTraceEvent =
   | { type: "NEW_DATA"; data: any };
 
 
-export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
+export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent, DevTraceState>({
   {
     context: {
       analysisResults: undefined,
@@ -200,7 +188,7 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
               onDone: {
                 target: "suggestionsReceived",
                 actions: assign({
-                  suggestions: (_, event: { data: Record<string, unknown> }) =>
+                  suggestions: (_, event: { data: Record<string, AISuggestion> }) =>
                     event ? event.data : undefined,
                 }),
               },
@@ -460,19 +448,19 @@ export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
           event?.functionName ?? null,
       }),
       addLiveEvent: assign({
-        liveEvents: (context: DevTraceContext, event: { type: "addLiveEvent"; event: Record<string, unknown> }) => [
-          ...context.liveEvents,
-          event.event,
-        ],
+        // liveEvents: (context: DevTraceContext, event: { type: "addLiveEvent"; event: Record<string, unknown> }) => [
+        //   ...context.liveEvents,
+        //   event.event,
+        // ],
       }),
       clearLiveEvents: assign({
         liveEvents: [],
       }),
       addHotswapHistoryEntry: assign({
-        hotswapHistory: (context: DevTraceContext, event) => [
-          ...context.hotswapHistory,
-          (event as { entry: { timestamp: number; details: string } }).entry,
-        ],
+        // hotswapHistory: (context: DevTraceContext, event) => [
+        //   ...context.hotswapHistory,
+        //   (event as { entry: { timestamp: number; details: string } }).entry,
+        // ],
       }),
       clearHotswapHistory: assign({
         hotswapHistory: [],

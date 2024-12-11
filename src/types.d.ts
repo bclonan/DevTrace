@@ -120,6 +120,10 @@ export interface LiveEvent {
         description: string;
         codeSnippet: string;
     };
+
+    type: "error" | "warning" | "info" | "log" | "performance";
+
+    [key: string]: unknown;
 }
 
 /**
