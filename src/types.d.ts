@@ -128,10 +128,10 @@ export interface HotswapHistoryEntry {
     // ... other properties as needed
 }
 
-  interface DevTraceActorOptions {
+interface DevTraceActorOptions {
     id: string;
     logger?: (event: DevTraceEvent) => void;
-  }
+}
 
 /**
  * Interface for AI suggestion objects.
@@ -216,3 +216,65 @@ export type DevTraceEvent =
     | { type: "clearLiveEvents" }
     | { type: "addHotswapHistoryEntry"; entry: HotswapHistoryEntry }
     | { type: "clearHotswapHistory" };
+
+/**
+* The DevTraceService interface aggregates all service methods
+* to communicate with the backend routes.
+*/
+export interface DevTraceService {
+    /**
+     * Analyzes the code and returns a list of issues.
+     */
+    analyze(req: AnalyzeRequest): Promise<AnalyzeResponse>;
+
+    /**
+     * Generates flow data for the given function name.
+     */
+    flow(req: FlowRequest): Promise<FlowResponse>;
+
+    /**
+     * Streams live events.
+     * Since this is SSE, you might define a method that sets up a listener
+     * instead of returning a Promise. For example:
+     */
+    subscribeToLiveEvents(callback: (event: LiveEvent) => void): void;
+
+    /**
+     * Manages hotswap operations.
+     */
+    hotswap(req: HotswapRequest): Promise<HotswapResponse>;
+
+    /**
+     * Fetches code suggestions from the AI provider.
+     */
+    suggestFix(req: AISuggestFixRequest): Promise<AISuggestFixResponse>;
+
+    /**
+     * Applies the given suggestion to the code.
+     */
+    applySuggestion(req: ApplySuggestionRequest): Promise<ApplySuggestionResponse>;
+}
+
+export interface AnalyzeCodeResult {
+    [key: string]: unknown;
+}
+
+export interface ProcessFlowResult {
+    [key: string]: unknown;
+}
+
+export interface StartLiveTraceResult {
+    [key: string]: unknown;
+}
+
+export interface PerformHotswapResult {
+    [key: string]: unknown;
+}
+
+export interface FetchSuggestionsResult {
+    [key: string]: unknown;
+}
+
+export interface ApplySuggestionResult {
+    [key: string]: unknown;
+}

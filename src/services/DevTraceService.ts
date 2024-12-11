@@ -103,7 +103,7 @@ export class DevTraceService {
      * @param entry The hotswap history entry to add.
      */
     static addHotswapHistoryEntry(
-        entry: { timestamp: string; details: string },
+        entry: { timestamp: number; details: string },
     ) {
         devTraceActor.send({ type: "addHotswapHistoryEntry", entry });
     }

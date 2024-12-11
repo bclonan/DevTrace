@@ -2,7 +2,7 @@
 
 import * as vscode from "vscode";
 import { RuntimeFacade } from "./services/RuntimeFacade.ts"; // Import from .ts file
-import { devTraceService } from "./stateMachine.ts"; // Import from .ts file
+import { devTraceActor } from "./stateMachine.ts"; // Import from .ts file
 import { FlowPanel } from "./ui/FlowPanel.ts"; // Import from .ts file
 import { HotswapPanel } from "./ui/HotswapPanel.ts"; // Import from .ts file
 import { InsightPanel } from "./ui/InsightPanel.ts"; // Import from .ts file
@@ -19,46 +19,46 @@ export function activate(context: vscode.ExtensionContext) {
   // Register commands
   context.subscriptions.push(
     vscode.commands.registerCommand("devtrace.startInsightMode", () => {
-      devTraceService.send({ type: "start.insightMode" });
+      devTraceActor.send({ type: "start.insightMode" });
     }),
     vscode.commands.registerCommand("devtrace.startFlowMode", () => {
-      devTraceService.send({ type: "start.flowMode" });
+      devTraceActor.send({ type: "start.flowMode" });
     }),
     vscode.commands.registerCommand("devtrace.startLiveTraceMode", () => {
-      devTraceService.send({ type: "start.liveTraceMode" });
+      devTraceActor.send({ type: "start.liveTraceMode" });
     }),
     vscode.commands.registerCommand("devtrace.startHotswapMode", () => {
-      devTraceService.send({ type: "start.hotswapMode" });
+      devTraceActor.send({ type: "start.hotswapMode" });
     }),
     vscode.commands.registerCommand("devtrace.analyze", () => {
-      devTraceService.send({ type: "analyze" });
+      devTraceActor.send({ type: "analyze" });
     }),
     vscode.commands.registerCommand(
       "devtrace.generateFlow",
       (functionName: string) => {
-        devTraceService.send({ type: "generateFlow", functionName });
+        devTraceActor.send({ type: "generateFlow", functionName });
       },
     ),
     vscode.commands.registerCommand("devtrace.streamLiveEvents", () => {
-      devTraceService.send({ type: "streamLiveEvents" });
+      devTraceActor.send({ type: "streamLiveEvents" });
     }),
     vscode.commands.registerCommand("devtrace.rollback", (stateId: string) => {
-      devTraceService.send({ type: "rollback", stateId });
+      devTraceActor.send({ type: "rollback", stateId });
     }),
     vscode.commands.registerCommand(
       "devtrace.applyFix",
       (stateId: string, newCode: string) => {
-        devTraceService.send({ type: "applyFix", stateId, newCode });
+        devTraceActor.send({ type: "applyFix", stateId, newCode });
       },
     ),
     vscode.commands.registerCommand(
       "devtrace.playForward",
       (stateId: string) => {
-        devTraceService.send({ type: "playForward", stateId });
+        devTraceActor.send({ type: "playForward", stateId });
       },
     ),
     vscode.commands.registerCommand("devtrace.exit", () => {
-      devTraceService.send({ type: "exit" });
+      devTraceActor.send({ type: "exit" });
     }),
   );
 
@@ -66,22 +66,22 @@ export function activate(context: vscode.ExtensionContext) {
   const insightPanel = new InsightPanel(
     context.extensionUri,
     runtimeFacade,
-    devTraceService,
+    devTraceActor,
   );
   const flowPanel = new FlowPanel(
     context.extensionUri,
     runtimeFacade,
-    devTraceService,
+    devTraceActor,
   );
   const liveTracePanel = new LiveTracePanel(
     context.extensionUri,
     runtimeFacade,
-    devTraceService,
+    devTraceActor,
   );
   const hotswapPanel = new HotswapPanel(
     context.extensionUri,
     runtimeFacade,
-    devTraceService,
+    devTraceActor,
   );
 
   // Register webview views
@@ -105,4 +105,4 @@ export function activate(context: vscode.ExtensionContext) {
 /**
  * Deactivates the DevTrace AI extension.
  */
-export function deactivate() {}
+export function deactivate() { }

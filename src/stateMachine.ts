@@ -1,17 +1,9 @@
 // src/stateMachine.ts
 
-import EventSource from "eventsource";
-import * as vscode from "vscode";
 import { assign, createActor, createMachine } from "xstate";
 import { AIProvider } from "./ai/AIModelFactory.ts";
 import { RuntimeFacade } from "./services/RuntimeFacade.ts";
-lunch
 
-
-/**
- * The DevTrace state machine definition.
- * This machine manages the different states and transitions of the DevTrace AI extension.
- */
 interface DevTraceContext {
   analysisResults?: Record<string, unknown>;
   errorMessage?: string;
@@ -25,7 +17,6 @@ interface DevTraceContext {
   aiProvider: AIProvider;
   apiKey: string;
   suggestions?: any;
-  // Add other context variables as needed
   userPreferences?: Record<string, unknown>;
   sessionId?: string;
   projectSettings?: Record<string, unknown>;
@@ -66,7 +57,6 @@ export type DevTraceState =
   | { value: "hotswapMode.completed"; context: DevTraceContext }
   | { value: "hotswapMode.error"; context: DevTraceContext };
 
-// Define the type for the state machine's events
 export type DevTraceEvent =
   | { type: "exit" }
   | { type: "start.insightMode" }
@@ -75,7 +65,7 @@ export type DevTraceEvent =
   | { type: "start.hotswapMode" }
   | { type: "analyze" }
   | { type: "fetchSuggestions" }
-  | { type: "applySuggestion"; suggestion: string }
+  | { type: "applySuggestion"; suggestion: any }
   | { type: "process"; data: { functionName: string } }
   | { type: "trace" }
   | { type: "swap" }
@@ -84,118 +74,62 @@ export type DevTraceEvent =
   | { type: "playForward"; stateId: string }
   | { type: "streamLiveEvents" }
   | { type: "generateFlow"; functionName: string }
-  | {
-    type: "stateChanged";
-    state: string;
-    liveEvents: any;
-    errorMessage: string;
-  }
+  | { type: "stateChanged"; state: string; liveEvents: any; errorMessage: string }
   | { type: "liveEvents"; event: Record<string, unknown> }
   | { type: "error"; errorMessage: string }
-  | { type: "entry"; entry: any }
-  | { type: "exit"; exit: any }
-  | { type: "event"; event: any }
-  | { type: "fetchSuggestions"; errorMessage: string }
-  | { type: "applySuggestion"; suggestion: any }
   | { type: "updateCurrentFile"; file: string }
   | { type: "updateSelectedFunction"; functionName: string }
   | { type: "addLiveEvent"; event: any }
   | { type: "clearLiveEvents" }
-  | { type: "addHotswapHistoryEntry"; entry: any }
-  | { type: "clearHotswapHistory" };
+  | { type: "addHotswapHistoryEntry"; entry: { timestamp: number; details: string } }
+  | { type: "clearHotswapHistory" }
+  | { type: "NEW_DATA"; data: any };
 
 
-export const devTraceMachine = createMachine<
-  DevTraceContext,
-  DevTraceEvent,
-  DevTraceTypeState
->(
+export const devTraceMachine = createMachine<DevTraceContext, DevTraceEvent>(
   {
-    /**
-     * The machine context.
-     * Holds variables that can be accessed across different states and actions.
-     */
     context: {
       analysisResults: undefined,
       errorMessage: undefined,
       flowResults: undefined,
       traceResults: undefined,
       hotswapResults: undefined,
-      // Add other context variables as needed, e.g.,
-      currentFile: null as string | null, // Currently active file in the editor
-      selectedFunction: null, // Currently selected function for flow analysis
-      liveEvents: [], // Array to store live events
-      hotswapHistory: [], // Array to store hotswap history
-      aiProvider: "openai" as AIProvider, // Default AI provider
-      apiKey: "", // API key for the AI provider
-      suggestions: undefined, // Suggestions from the AI provider
+      currentFile: null,
+      selectedFunction: null,
+      liveEvents: [],
+      hotswapHistory: [],
+      aiProvider: "openai" as AIProvider,
+      apiKey: "",
+      suggestions: undefined,
     },
-    /**
-     * The unique identifier for the machine.
-     */
     id: "devTraceAI",
-    /**
-     * The initial state of the machine.
-     */
     initial: "idle",
-    /**
-     * The states of the machine.
-     */
     states: {
-      /**
-       * The idle state.
-       * The extension is not actively tracing or analyzing.
-       */
       idle: {
         on: {
-          /**
-           * Transition to `insightMode` when the 'start.insightMode' event is received.
-           */
           "start.insightMode": {
             target: "insightMode",
-            actions: "startTracing", // Start tracing when entering insightMode
+            actions: "startTracing",
           },
-          /**
-           * Transition to `flowMode` when the 'start.flowMode' event is received.
-           */
           "start.flowMode": {
             target: "flowMode",
           },
-          /**
-           * Transition to `liveTraceMode` when the 'start.liveTraceMode' event is received.
-           */
           "start.liveTraceMode": {
             target: "liveTraceMode",
-            actions: "startTracing", // Start tracing when entering liveTraceMode
+            actions: "startTracing",
           },
-          /**
-           * Transition to `hotswapMode` when the 'start.hotswapMode' event is received.
-           */
           "start.hotswapMode": {
             target: "hotswapMode",
           },
         },
-        /**
-         * Description of the idle state.
-         */
         description:
           "The machine is in an idle state, waiting for user interaction to start any mode.",
       },
-      /**
-       * The insightMode state.
-       * The extension is actively analyzing code for potential issues.
-       */
       insightMode: {
         on: {
-          /**
-           * Transition to `insightMode.analyzing` when the 'analyze' event is received.
-           */
           analyze: {
             target: "insightMode.analyzing",
           },
-          /**
-           * Transition to `idle` when the 'exit' event is received.
-           */
           exit: {
             target: "idle",
             actions: [
@@ -207,36 +141,14 @@ export const devTraceMachine = createMachine<
             ],
           },
         },
-        /**
-         * The initial state within `insightMode`.
-         */
         initial: "idle",
-        /**
-         * The nested states within `insightMode`.
-         */
         states: {
-          /**
-           * The idle state within `insightMode`.
-           */
           idle: {},
-          /**
-           * The analyzing state within `insightMode`.
-           * The extension is actively making an API call to analyze the code.
-           */
           analyzing: {
-            /**
-             * Invoke the `analyzeCode` service to perform the analysis.
-             */
             invoke: {
               src: "analyzeCode",
-              /**
-               * When the service finishes successfully, transition to `results`.
-               */
               onDone: {
                 target: "results",
-                /**
-                 * Assign the analysis results to the `analysisResults` context variable.
-                 */
                 actions: assign({
                   analysisResults: (
                     _,
@@ -244,14 +156,8 @@ export const devTraceMachine = createMachine<
                   ) => event ? event.data : undefined,
                 }),
               },
-              /**
-               * When the service encounters an error, transition to `error`.
-               */
               onError: {
                 target: "error",
-                /**
-                 * Assign the error message to the `errorMessage` context variable.
-                 */
                 actions: assign({
                   errorMessage: (_, event: { data: string }) =>
                     event ? event.data : undefined,
@@ -259,29 +165,14 @@ export const devTraceMachine = createMachine<
               },
             },
           },
-          /**
-           * The results state within `insightMode`.
-           * The analysis results are available.
-           */
           results: {
             on: {
-              /**
-               * Transition to `insightMode.fetchingSuggestions` when the 'fetchSuggestions' event is received.
-               */
               fetchSuggestions: {
                 target: "fetchingSuggestions",
               },
             },
           },
-          /**
-           * The error state within `insightMode`.
-           * An error occurred during analysis.
-           */
           error: {},
-          /**
-           * The fetchingSuggestions state within `insightMode`.
-           * The extension is fetching suggestions from the AI provider.
-           */
           fetchingSuggestions: {
             invoke: {
               src: "fetchSuggestions",
@@ -301,24 +192,13 @@ export const devTraceMachine = createMachine<
               },
             },
           },
-          /**
-           * The suggestionsReceived state within `insightMode`.
-           * The suggestions from the AI provider are available.
-           */
           suggestionsReceived: {
             on: {
-              /**
-               * Transition to `insightMode.applyingSuggestion` when the 'applySuggestion' event is received.
-               */
               applySuggestion: {
                 target: "applyingSuggestion",
               },
             },
           },
-          /**
-           * The applyingSuggestion state within `insightMode`.
-           * The extension is applying the selected suggestion to the code.
-           */
           applyingSuggestion: {
             invoke: {
               src: "applySuggestion",
@@ -335,16 +215,9 @@ export const devTraceMachine = createMachine<
             },
           },
         },
-        /**
-         * Description of the insightMode state.
-         */
         description:
           "Aggregates and analyzes runtime issues, providing insights into errors and their potential fixes.",
       },
-      /**
-       * The flowMode state.
-       * The extension is visualizing the execution flow of the code.
-       */
       flowMode: {
         initial: "idle",
         states: {
@@ -385,10 +258,6 @@ export const devTraceMachine = createMachine<
         },
         description: "Handles the flow of data and processes it accordingly.",
       },
-      /**
-       * The liveTraceMode state.
-       * The extension is providing real-time diagnostics.
-       */
       liveTraceMode: {
         initial: "idle",
         states: {
@@ -411,6 +280,16 @@ export const devTraceMachine = createMachine<
                 }),
               },
             },
+            on: {
+              addLiveEvent: { actions: "addLiveEvent" },
+              error: {
+                actions: assign({
+                  errorMessage: (_, event: { data: { errorMessage: string } }) =>
+                    event ? event.data.errorMessage : undefined,
+                }),
+              },
+              NEW_DATA: { actions: "handleNewData" },
+            },
           },
           completed: {},
           error: {},
@@ -430,13 +309,8 @@ export const devTraceMachine = createMachine<
             ],
           },
         },
-        description:
-          "Executes live tracing of the application, capturing real-time data.",
+        description: "Executes live tracing of the application, capturing real-time data.",
       },
-      /**
-       * The hotswapMode state.
-       * The extension is enabling hotswapping of code.
-       */
       hotswapMode: {
         initial: "idle",
         states: {
@@ -483,247 +357,107 @@ export const devTraceMachine = createMachine<
     },
   },
   {
-    /**
-     * Actions that can be executed in response to events.
-     */
-    actions: {
-      /**
-       * Action to start tracing.
-       */
-      startTracing: () => {
-        // Call the RuntimeFacade to start the tracing process
+    services: {
+      analyzeCode: async () => {
         const runtimeFacade = new RuntimeFacade();
-        runtimeFacade.startTracing();
-        // ... any other actions needed to start tracing
+        const results = await runtimeFacade.analyzeCode();
+        return results;
       },
-      /**
-       * Action to stop tracing.
-       */
-      stopTracing: () => {
-        // Call the RuntimeFacade to stop the tracing process
-        const runtimeFacade = new RuntimeFacade();
-        runtimeFacade.stopTracing();
-        // ... any other actions needed to stop tracing
-      },
-      /**
-       * Action to analyze code.
-       */
-      // Removed analyzeCode from actions
-      /**
-       * Action to process flow.
-       */
-      processFlow: async (context: DevTraceContext) => {
-        // Call the RuntimeFacade to process the flow
+      processFlow: async (context: DevTraceContext): Promise<Record<string, unknown>> => {
         const runtimeFacade = new RuntimeFacade();
         const results = await runtimeFacade.generateFlowData(
           context.selectedFunction ?? "",
         );
-        // ... any other actions needed to process the flow
         return results;
       },
-      /**
-       * Action to start live trace.
-       */
-      startLiveTrace: async (context: DevTraceContext) => {
-        // Call the RuntimeFacade to start live trace
+      startLiveTrace: async (context: DevTraceContext): Promise<Record<string, unknown>> => {
         const runtimeFacade = new RuntimeFacade();
-        // Assuming webviewView is accessible in this context
-        const webviewView = vscode.window.tabGroups.activeTabGroup.activeTab?.webviewView;
-
-  if (context.currentFile && context.selectedFunction && webviewView) {
-    runtimeFacade.startLiveTrace(
-      {
-        subscribe: (callback) => {
-          // Establish a connection to the backend to stream live events
-          const eventSource = new EventSource("http://localhost:3000/live");
-
-          // Listen for incoming events
-          eventSource.onmessage = (event: { type: string; event: Record<string, unknown> }) => {
-            const liveEvent = event.event;
-           // callback({ type: "liveEvents", event: liveEvent });
-           console.log("Live event received:", liveEvent);
-          };
-
-          // Handle errors
-          eventSource.onerror = (error) => {
-            console.error("Error streaming live events:", error);
-            // Optionally, send an error event to the state machine
-            // callback({ type: 'error', errorMessage: 'Error streaming live events' });
-          };
-        },
-        send: () => {
-          // Here, you can handle messages sent from the state machine
-          // and send them to the RuntimeFacade
-          // For example:
-          // if (message.type === 'stopTracing') {
-          //   runtimeFacade.stopTracing();
-          // }
-        },
+        // Note: Removed direct references to devTraceActor here.
+        // If you need to interact with devTraceActor, do so outside the machine after it's started.
+        const results = await runtimeFacade.startLiveTrace(
+          {
+            subscribe: (_callback) => {
+              // Set up external subscriptions as needed.
+            },
+            send: (_message) => {
+              // Implement message sending as needed.
+            },
+          },
+          { webview: { postMessage: () => { }, onDidReceiveMessage: () => { } } },
+        );
+        return results;
       },
-      webviewView,
-          );
-        } else {
-          throw new Error(
-            "currentFile or selectedFunction or webviewView is null",
-          );
-        }
-      },
-      /**
-       * Action to perform hotswap.
-       */
-      performHotswap: async (context: DevTraceContext) => {
-        // Call the RuntimeFacade to perform hotswap
+      performHotswap: async (context) => {
         const runtimeFacade = new RuntimeFacade();
         const results = await runtimeFacade.performHotswap(
-          context.stateId ?? "", // Provide a default value if stateId is undefined
-          context.newCode ?? "", // Provide a default value if newCode is undefined
+          "hotswap",
+          context.stateId ?? "",
+          context.newCode ?? "",
         );
-        // ... any other actions needed to perform hotswap
         return results;
       },
-      /**
-       * Action to update the current file in the context.
-       */
+      fetchSuggestions: async (context, event: { errorMessage: string }) => {
+        const runtimeFacade = new RuntimeFacade();
+        const suggestions = await runtimeFacade.fetchSuggestions(
+          event.errorMessage,
+          context.currentFile ?? "",
+          context.aiProvider,
+          context.apiKey,
+        );
+        return suggestions;
+      },
+      applySuggestion: async (context, event: { suggestion: Record<string, unknown> }) => {
+        const runtimeFacade = new RuntimeFacade();
+        const result = await runtimeFacade.applySuggestion(
+          context.currentFile ?? "",
+          JSON.stringify(event.suggestion),
+        );
+        return result;
+      },
+    },
+    actions: {
+      startTracing: () => {
+        const runtimeFacade = new RuntimeFacade();
+        runtimeFacade.startTracing();
+      },
+      stopTracing: () => {
+        const runtimeFacade = new RuntimeFacade();
+        runtimeFacade.stopTracing();
+      },
       updateCurrentFile: assign({
         currentFile: (_, event: { file?: string }) => event?.file ?? null,
       }),
-
-      /**
-       * Action to update the selected function in the context.
-       */
       updateSelectedFunction: assign({
         selectedFunction: (_, event: { functionName?: string }) =>
           event?.functionName ?? null,
       }),
-
-      /**
-       * Action to add a live event to the context.
-       */
       addLiveEvent: assign({
-        liveEvents: (
-          context,
-          event: { type: "addLiveEvent"; event: Record<string, unknown> },
-        ) => [
-          ...((context as unknown) as DevTraceContext).liveEvents,
+        liveEvents: (context, event: { type: "addLiveEvent"; event: Record<string, unknown> }) => [
+          ...context.liveEvents,
           event.event,
         ],
       }),
-
-      /**
-       * Action to clear live events in the context.
-       */
       clearLiveEvents: assign({
         liveEvents: [],
       }),
-
-      /**
-       * Action to add an entry to the hotswap history in the context.
-       */
       addHotswapHistoryEntry: assign({
-        hotswapHistory: (
-          context,
-          event,
-        ) => [
-          ...((context as unknown) as DevTraceContext).hotswapHistory,
-          (event as { entry: { timestamp: number; details: string } }).entry,
+        hotswapHistory: (context, event: { entry: { timestamp: number; details: string } }) => [
+          ...context.hotswapHistory,
+          event.entry,
         ],
       }),
-
-      /**
-       * Action to clear hotswap history in the context.
-       */
       clearHotswapHistory: assign({
         hotswapHistory: [],
       }),
-    },
-    /**
-     * Services that can be invoked by the machine.
-     */
-    services: {
-      analyzeCode: () => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const results = await runtimeFacade.analyzeCode();
-          return results;
-        },
-        id: "analyzeCodeActor", // Give the actor an ID
-      }),
-      processFlow: (context: DevTraceContext) => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const results = await runtimeFacade.generateFlowData(
-            context.selectedFunction ?? "",
-          );
-          return results;
-        },
-        id: "processFlowActor",
-      }),
-      startLiveTrace: () => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const results = await runtimeFacade.startLiveTrace();
-          return results;
-        },
-        id: "startLiveTraceActor",
-      }),
-      performHotswap: () => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const results = await runtimeFacade.performHotswap();
-          return results;
-        },
-        id: "performHotswapActor",
-      }),
-      fetchSuggestions: (
-        context: {
-          currentFile: string | null;
-          aiProvider: string;
-          apiKey: string;
-        },
-        event: { errorMessage: string },
-      ) => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const suggestions = await runtimeFacade.fetchSuggestions(
-            event.errorMessage,
-            context.currentFile ?? "",
-            context.aiProvider as AIProvider,
-            context.apiKey,
-          );
-          return suggestions;
-        },
-        id: "fetchSuggestionsActor",
-      }),
-      applySuggestion: (
-        context: DevTraceContext,
-        event: { suggestion: Record<string, unknown> },
-      ) => ({
-        src: async () => {
-          const runtimeFacade = new RuntimeFacade();
-          const result = await runtimeFacade.applySuggestion(
-            context.currentFile ?? "",
-            event.suggestion,
-          );
-          return result;
-        },
-        id: "applySuggestionActor",
-      }),
+      // Add handleNewData action if needed
+      handleNewData: () => {
+        // Implement handling of NEW_DATA event
+      },
     },
   },
 );
 
-/**
- * The DevTrace state machine actor.
- * This actor is used to interpret the state machine and manage its execution.
- */
-let devTraceActor = createActor(devTraceMachine, {
-  id: "devTraceActor", // Assign an ID to the actor
+export const devTraceActor = createActor(devTraceMachine, {
+  id: "devTraceActor",
   logger: (event: DevTraceEvent) => console.log("Event:", event),
 });
-
-
-
-// You can now start the actor using devTraceActor.start()
-// and interact with it using devTraceActor.send()
-
-export const devTraceService = devTraceActor.start();
