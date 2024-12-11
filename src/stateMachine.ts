@@ -247,7 +247,7 @@ export const devTraceMachine = createMachine({
       return await runtimeFacade.analyzeCode();
     },
     processFlow: async (context: DevTraceContext) => {
-      if (!context.selectedFunction) throw new Error('No function selected');
+      if (!context.selectedFunction) { throw new Error('No function selected'); };
       return await runtimeFacade.generateFlowData(context.selectedFunction);
     },
     startLiveTrace: async () => {
@@ -260,11 +260,11 @@ export const devTraceMachine = createMachine({
       return await runtimeFacade.performHotswap(context.stateId, context.newCode);
     },
     applySuggestion: async (context: DevTraceContext, event: { suggestion: AISuggestion }) => {
-      if (!context.currentFile) throw new Error('No file selected');
+      if (!context.currentFile) { throw new Error('No file selected'); };
       return await runtimeFacade.applySuggestion(context.currentFile, event.suggestion);
     },
     fetchSuggestions: async (context: DevTraceContext, event: FetchSuggestionsRequest) => {
-      if (!context.currentFile) throw new Error('No file selected');
+      if (!context.currentFile) { throw new Error('No file selected'); };
 
       const request: FetchSuggestionsRequest = {
         errorMessage: event.errorMessage,
