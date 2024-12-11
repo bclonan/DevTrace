@@ -33,7 +33,7 @@ export class DevTraceService {
      * @param functionName The name of the function to process.
      */
     static processFlow(functionName: string) {
-        devTraceActor.send({ type: "process", functionName });
+        devTraceActor.send({ type: "process", data: { functionName } });
     }
 
     /**
@@ -92,7 +92,9 @@ export class DevTraceService {
      * Adds a live event to the state machine context.
      * @param event The live event to add.
      */
-    static addLiveEvent(event: any) {
+    static addLiveEvent(
+        event: { type: string; payload: Record<string, unknown> },
+    ) {
         devTraceActor.send({ type: "addLiveEvent", event });
     }
 
@@ -100,7 +102,9 @@ export class DevTraceService {
      * Adds a hotswap history entry to the state machine context.
      * @param entry The hotswap history entry to add.
      */
-    static addHotswapHistoryEntry(entry: any) {
+    static addHotswapHistoryEntry(
+        entry: { timestamp: string; details: string },
+    ) {
         devTraceActor.send({ type: "addHotswapHistoryEntry", entry });
     }
 
@@ -108,7 +112,9 @@ export class DevTraceService {
      * Subscribes to state changes in the DevTrace actor.
      * @param listener The listener function to handle state changes.
      */
-    static subscribe(listener: (state: any) => void) {
+    static subscribe(
+        listener: (state: ReturnType<typeof devTraceActor.getSnapshot>) => void,
+    ) {
         devTraceActor.subscribe(listener);
     }
 }

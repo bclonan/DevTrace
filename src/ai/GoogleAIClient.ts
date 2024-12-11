@@ -1,5 +1,6 @@
 // src/ai/GoogleAIClient.ts
 
+import * as vscode from "vscode";
 import { AIModelClient } from "./AIModelClient.ts";
 // Import the Google AI client library
 
@@ -24,19 +25,39 @@ export class GoogleAIClient implements AIModelClient {
      * @param currentFile The current file being edited.
      * @returns A Promise that resolves to an array of suggestions.
      */
-    fetchSuggestions(
-        errorMessage: string,
-        currentFile: string,
+    async fetchSuggestions(
+        _errorMessage: string,
+        _currentFile: string,
     ): Promise<{ description: string; codeSnippet: string }[]> {
         try {
-            // Use the Google AI client library to fetch suggestions
-            // ...
+            // Get the active text editor
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                throw new Error("No active text editor found.");
+            }
 
-            const suggestions = [
-                // ... format the suggestions as needed
-            ];
+            // Trigger Copilot suggestion
+            const suggestions = await vscode.commands.executeCommand<
+                vscode.CompletionList
+            >(
+                "editor.action.triggerSuggest",
+            );
 
-            return suggestions;
+            if (!suggestions || suggestions.items.length === 0) {
+                throw new Error("No suggestions from Copilot.");
+            }
+
+            // Format the suggestions
+            const formattedSuggestions = suggestions.items.map((item) => ({
+                description: typeof item.label === "string"
+                    ? item.label
+                    : item.label.label,
+                codeSnippet: typeof item.insertText === "string"
+                    ? item.insertText
+                    : item.insertText?.value ?? "", // Use insertText or label as fallback
+            }));
+
+            return formattedSuggestions;
         } catch (error) {
             console.error("Error fetching suggestions from Google AI:", error);
             throw error;

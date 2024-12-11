@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 /**
  * Analyzes the code and returns a list of issues.
  */
-app.post("/analyze", async (req, res) => {
+app.post("/analyze", (req, res) => {
   // ... logic to analyze logs and return issues
   console.log("Received analyze request:", req.body);
   res.json({
@@ -33,7 +33,7 @@ app.post("/analyze", async (req, res) => {
 /**
  * Generates flow data for the given function name.
  */
-app.post("/flow", async (req, res) => {
+app.post("/flow", (req, res) => {
   // ... logic to generate flow data
   console.log("Received flow request:", req.body);
   res.json({
@@ -56,7 +56,7 @@ app.post("/flow", async (req, res) => {
 /**
  * Streams live events.
  */
-app.get("/live", async (req, res) => {
+app.get("/live", (_req, res) => {
   // ... logic to stream live events
   console.log("Received live events request");
   res.writeHead(200, {
@@ -86,7 +86,7 @@ app.get("/live", async (req, res) => {
 /**
  * Manages hotswap operations.
  */
-app.post("/hotswap", async (req, res) => {
+app.post("/hotswap", (req, res) => {
   // ... logic to manage hotswap operations
   console.log("Received hotswap request:", req.body);
   res.json({

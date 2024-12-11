@@ -10,11 +10,11 @@ const asyncHooks = require("node:async_hooks");
  * Provides methods for instrumenting and interacting with Node.js code.
  */
 export class NodeAdapter implements LanguageRuntimeAdapter {
-  private asyncHook: any;
+  private asyncHook!: import("node:async_hooks").AsyncHook;
   private currentFunction: {
     asyncId: string;
     name: string;
-    args: any[];
+    args: unknown[];
     startTime: number;
   } | null = null;
 
@@ -26,8 +26,8 @@ export class NodeAdapter implements LanguageRuntimeAdapter {
       init: (
         _asyncId: number,
         type: string,
-        _triggerAsyncId: any,
-        resource: any,
+        _triggerAsyncId: number,
+        resource: { name: string; args: unknown[] },
       ) => {
         if (type === "FUNCTION") {
           this.currentFunction = {
@@ -104,7 +104,7 @@ export class NodeAdapter implements LanguageRuntimeAdapter {
    * @param functionName The name of the function.
    * @param args The arguments passed to the function.
    */
-  captureFunctionCall(functionName: string, args: any[]) {
+  captureFunctionCall(functionName: string, args: unknown[]) {
     console.log(`Function called: ${functionName}(${JSON.stringify(args)})`);
   }
 
@@ -113,7 +113,7 @@ export class NodeAdapter implements LanguageRuntimeAdapter {
    * @param functionName The name of the function.
    * @param returnValue The return value of the function.
    */
-  captureFunctionReturn(functionName: string, returnValue: any) {
+  captureFunctionReturn(functionName: string, returnValue: unknown) {
     console.log(
       `Function returned: ${functionName} returned ${
         JSON.stringify(returnValue)

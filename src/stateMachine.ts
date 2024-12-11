@@ -8,6 +8,10 @@ import { RuntimeFacade } from "./services/RuntimeFacade.ts";
  * The DevTrace state machine definition.
  * This machine manages the different states and transitions of the DevTrace AI extension.
  */
+/**
+ * The DevTrace state machine definition.
+ * This machine manages the different states and transitions of the DevTrace AI extension.
+ */
 interface DevTraceContext {
   analysisResults?: Record<string, unknown>;
   errorMessage?: string;
@@ -16,11 +20,22 @@ interface DevTraceContext {
   hotswapResults?: Record<string, unknown>;
   currentFile: string | null;
   selectedFunction: string | null;
-  liveEvents: { type: string; payload: unknown }[];
+  liveEvents: any[];
   hotswapHistory: { timestamp: number; details: string }[];
   aiProvider: AIProvider;
   apiKey: string;
   suggestions?: any;
+  // Add other context variables as needed
+  userPreferences?: Record<string, unknown>;
+  sessionId?: string;
+  projectSettings?: Record<string, unknown>;
+  activeBreakpoints?: any[];
+  debugSession?: any;
+  performanceMetrics?: Record<string, unknown>;
+  codeSnippets?: Record<string, string>;
+  userNotes?: string[];
+  activeTheme?: string;
+  recentFiles?: string[];
 }
 
 type DevTraceEvent =
@@ -46,6 +61,7 @@ type DevTraceEvent =
     liveEvents: any;
     errorMessage: string;
   }
+  | { type: "liveEvents"; event: any }
   | { type: "error"; errorMessage: string }
   | { type: "entry"; entry: any }
   | { type: "exit"; exit: any }
@@ -82,7 +98,6 @@ export const devTraceMachine = createMachine<
       flowResults: undefined,
       traceResults: undefined,
       hotswapResults: undefined,
-      // Add other context variables as needed, e.g.,
       currentFile: null as string | null, // Currently active file in the editor
       selectedFunction: null, // Currently selected function for flow analysis
       liveEvents: [], // Array to store live events
@@ -486,10 +501,12 @@ export const devTraceMachine = createMachine<
         if (context.currentFile && context.selectedFunction) {
           const results = await runtimeFacade.startLiveTrace({
             subscribe: (callback) => {
-              // Implement the subscribe method
+              runtimeFacade.onLiveTraceEvent((event) => {
+                callback(event);
+              });
             },
             send: (message) => {
-              // Implement the send method
+              // runtimeFacade.sendMessage(message); // Removed as sendMessage does not exist on RuntimeFacade
             },
           });
           return results;
@@ -520,7 +537,8 @@ export const devTraceMachine = createMachine<
        * Action to update the selected function in the context.
        */
       updateSelectedFunction: assign({
-        selectedFunction: (_, event) => event?.functionName ?? null,
+        selectedFunction: (_, event: { functionName?: string }) =>
+          event?.functionName ?? null,
       }),
 
       /**
@@ -635,8 +653,8 @@ export const devTraceMachine = createMachine<
 export const devTraceActor = createActor(devTraceMachine, {
   devTools: true, // Enable devtools for debugging (if available in your environment)
   id: "devTraceActor", // Assign an ID to the actor
+
   // ... other configuration options for the actor, e.g.,
-  devTools: true, // Enable devtools for debugging (if available in your environment)
   logger: (event) => console.log("Event:", event), // Custom logger
 });
 
