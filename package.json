@@ -3,10 +3,21 @@
   "displayName": "DevTrace",
   "description": "A Comprehensive VS Code Extension for Advanced Debugging and AI-Assisted fixing",
   "version": "0.0.1",
+  "author": {
+    "name": "Bradley Clonan",
+    "email": "clonanxyz@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bclonan/DevTrace"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.95.0"
   },
   "categories": [
+    "AI",
+    "Testing",
     "Other"
   ],
   "activationEvents": [],
@@ -27,7 +38,8 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "build": "tsc -b",
-    "start": "node backend/server.ts"
+    "start": "node backend/server.ts",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@types/eventsource": "^1.1.15",
