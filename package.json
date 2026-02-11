@@ -46,7 +46,7 @@
     "@types/vscode": "^1.95.0",
     "@xstate/react": "^5.0.0",
     "async_hooks": "^1.0.0",
-    "axios": "^1.7.9",
+    "axios": "^1.13.5",
     "eventsource": "^3.0.1",
     "express": "^4.18.2",
     "node-fetch": "^3.3.2",
